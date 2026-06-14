@@ -26,8 +26,8 @@ export default async function Dashboard() {
         action={async (formData: FormData) => {
           "use server";
           const dest = formData.get("destination") as string;
-          const result = await generateTrip(dest);
-          console.log("Generated:", result.content);
+          const saved = await generateTrip(dest);
+          console.log("Saved trip:", saved);
         }}
       >
         <input name="destination" placeholder="e.g. Kyoto, Japan" />
