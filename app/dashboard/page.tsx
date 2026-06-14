@@ -1,6 +1,7 @@
 import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { syncUser } from "@/db/users";
+import { generateTrip } from "@/lib/actions";
 
 export default async function Dashboard() {
   const session = await auth0.getSession();
@@ -8,7 +9,7 @@ export default async function Dashboard() {
   if (!session) {
     redirect("/auth/login");
   }
-  
+
   if (!session.user.email) {
     throw new Error("No email is associated with this account");
   }
@@ -20,6 +21,18 @@ export default async function Dashboard() {
       <h1>Protected Dashboard</h1>
       <p>Welcome, {session.user.email}</p>
       <p>Your database ID: {dbUser.id}</p>
+
+      <form
+        action={async (formData: FormData) => {
+          "use server";
+          const dest = formData.get("destination") as string;
+          const result = await generateTrip(dest);
+          console.log("Generated:", result.content);
+        }}
+      >
+        <input name="destination" placeholder="e.g. Kyoto, Japan" />
+        <button type="submit">Generate</button>
+      </form>
     </div>
   );
 }
