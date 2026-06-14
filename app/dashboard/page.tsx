@@ -1,6 +1,6 @@
 import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
-import { syncUser } from "@/db/users";
+import { syncUser, getUserTrips } from "@/db/users";
 import { generateTrip } from "@/lib/actions";
 
 export default async function Dashboard() {
@@ -9,30 +9,42 @@ export default async function Dashboard() {
   if (!session) {
     redirect("/auth/login");
   }
-
   if (!session.user.email) {
     throw new Error("No email is associated with this account");
   }
 
   const dbUser = await syncUser(session.user.sub, session.user.email);
+  const userTrips = await getUserTrips(dbUser.id);
 
   return (
     <div>
       <h1>Protected Dashboard</h1>
       <p>Welcome, {session.user.email}</p>
-      <p>Your database ID: {dbUser.id}</p>
 
       <form
         action={async (formData: FormData) => {
           "use server";
           const dest = formData.get("destination") as string;
-          const saved = await generateTrip(dest);
-          console.log("Saved trip:", saved);
+          await generateTrip(dest);
         }}
       >
         <input name="destination" placeholder="e.g. Kyoto, Japan" />
         <button type="submit">Generate</button>
       </form>
+
+      <h2>Your Trips</h2>
+      {userTrips.length === 0 ? (
+        <p>No trips yet. Generate one above!</p>
+      ) : (
+        <ul>
+          {userTrips.map((trip) => (
+            <li key={trip.id}>
+              <strong>{trip.destination}</strong>
+              <p>{trip.content}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

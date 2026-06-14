@@ -1,6 +1,6 @@
 import { db } from "@/index";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, trips } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 // Takes the Auth0 user info, ensures a matching row exists in our DB,
 // and returns that row. Safe to call on every login.
@@ -24,4 +24,12 @@ export async function syncUser(auth0Sub: string, email: string) {
     .returning();
 
   return created;
+}
+
+export async function getUserTrips(userId: string) {
+  return await db
+    .select()
+    .from(trips)
+    .where(eq(trips.userId, userId))
+    .orderBy(desc(trips.createdAt));
 }
