@@ -5,6 +5,7 @@ import { generateTripContent } from "@/lib/llm";
 import { syncUser } from "@/db/users";
 import { db } from "@/index";
 import { trips } from "@/db/schema";
+import { revalidatePath } from "next/cache";
 
 export async function generateTrip(destination: string) {
   
@@ -33,6 +34,8 @@ export async function generateTrip(destination: string) {
       content,
     })
     .returning();
+
+    revalidatePath("/dashboard");
 
   return savedTrip;
 }
