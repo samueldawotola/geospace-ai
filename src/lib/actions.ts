@@ -24,7 +24,17 @@ export async function generateTrip(destination: string) {
 
   try {
     const dbUser = await syncUser(session.user.sub, session.user.email);
-    const content = await generateTripContent(destination);
+    const content = await generateTripContent(destination, {
+      displayName: dbUser.displayName,
+      dateOfBirth: dbUser.dateOfBirth,
+      nationality: dbUser.nationality,
+      travelStyle: dbUser.travelStyle,
+      fitness: dbUser.fitness,
+      budget: dbUser.budget,
+      accessibility: dbUser.accessibility,
+      familyPets: dbUser.familyPets,
+      hasPassport: dbUser.hasPassport,
+    });
 
     const [savedTrip] = await db
       .insert(trips)
