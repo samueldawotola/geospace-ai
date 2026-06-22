@@ -13,29 +13,32 @@ export async function generateTrip(destination: string) {
   if (!session) {
     throw new Error("Not authenticated");
   }
-
   if (!session.user.email) {
-    throw new Error("No email is associated with this account");
+    throw new Error("No email associated with this account");
   }
-  
+
   if (!destination || destination.trim().length === 0) {
-    throw new Error("Destination is required");
+    return { error: "Please enter a destination." };
   }
 
-  const dbUser = await syncUser(session.user.sub, session.user.email);
+  try {
+    const dbUser = await syncUser(session.user.sub, session.user.email);
+    const content = await generateTripContent(destination);
 
-  const content = await generateTripContent(destination);
-
-  const [savedTrip] = await db
-    .insert(trips)
-    .values({
-      userId: dbUser.id,
-      destination: destination.trim(),
-      content,
-    })
-    .returning();
+    const [savedTrip] = await db
+      .insert(trips)
+      .values({
+        userId: dbUser.id,
+        destination: destination.trim(),
+        content,
+      })
+      .returning();
 
     revalidatePath("/dashboard");
-
-  return savedTrip;
+    return { trip: savedTrip };
+  } catch (err) {
+    
+    console.error("generateTrip failed:", err);
+    return { error: "Couldn't generate your trip right now. Please try again." };
+  }
 }
