@@ -1,27 +1,18 @@
-import { Inter } from "next/font/google";
 import type { Metadata } from "next";
-import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
+import Nav from "@/components/nav";
 
 export const metadata: Metadata = {
-  title: "Auth0 Next.js App",
-  description: "Next.js app with Auth0 authentication",
+  title: "GeospaceAI",
+  description: "See the world before it changes.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <Auth0Provider>{children}</Auth0Provider>
+      <body className="min-h-screen bg-[#7FB3A9] text-black">
+        <Nav />
+        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
       </body>
     </html>
   );
