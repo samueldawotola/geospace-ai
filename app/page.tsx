@@ -1,160 +1,165 @@
 import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
-import { syncUser, getUserTrips } from "@/db/users";
-import { generateTrip } from "@/lib/actions";
-import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
+import { Bookmark, MapPin, Sparkles } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GenerateForm } from "@/components/generate-form";
-import { ProfileNudge } from "@/components/profile-nudge";
+import { Badge } from "@/components/ui/badge";
+import { ItineraryOverview } from "@/components/itinerary-overview";
+import { GlobeStill } from "@/components/globe-still";
+import { SAMPLE_ITINERARY } from "@/lib/sample-itinerary";
 
-const SUGGESTED_DESTINATIONS = ["Kyoto", "Lisbon", "Reykjavík"];
+const GITHUB_REPO = "https://github.com/samueldawotola/geospace-ai";
+const CONTACT_EMAIL = "ssgeospaceai@gmail.com";
 
-function firstName(displayName: string | null, authName: string | null | undefined, email: string) {
-  const fromDisplay = displayName?.trim().split(/\s+/)[0];
-  if (fromDisplay) return fromDisplay;
+const STEPS = [
+  {
+    icon: MapPin,
+    heading: "Name a destination",
+    body: "It's just one city, you say the word",
+  },
+  {
+    icon: Sparkles,
+    heading: "Get a grounded plan",
+    body: "The model researches real places and cites its sources, day by day.",
+  },
+  {
+    icon: Bookmark,
+    heading: "Save it and come back",
+    body: "Every itinerary stays in your account, ready to revisit and refine.",
+  },
+];
 
-  const fromAuth = authName?.trim().split(/\s+/)[0];
-  if (fromAuth) return fromAuth;
-
-  const local = email.split("@")[0];
-  return local.charAt(0).toUpperCase() + local.slice(1);
-}
-
-function isProfileIncomplete(user: {
-  displayName: string | null;
-  dateOfBirth: string | null;
-  nationality: string | null;
-  travelStyle: string | null;
-  budget: string | null;
-}) {
-  return (
-    !user.displayName ||
-    !user.dateOfBirth ||
-    !user.nationality ||
-    !user.travelStyle ||
-    !user.budget
-  );
-}
-
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ destination?: string }>;
-}) {
+export default async function LandingPage() {
   const session = await auth0.getSession();
 
-  if (!session) {
-    redirect("/auth/login");
-  }
-  if (!session.user.email) {
-    throw new Error("No email is associated with this account");
+  if (session) {
+    redirect("/dashboard");
   }
 
-  const dbUser = await syncUser(session.user.sub, session.user.email);
-  const trips = await getUserTrips(dbUser.id);
-  const { destination } = await searchParams;
-
-  async function createTrip(formData: FormData) {
-    "use server";
-    const dest = formData.get("destination") as string;
-    if (!dest?.trim()) return;
-    const result = await generateTrip(dest);
-    if (result.trip) {
-      redirect(`/dashboard/trips/${result.trip.id}`);
-    }
-  }
-
-  const name = firstName(
-    dbUser.displayName,
-    session.user.given_name ?? session.user.name,
-    session.user.email,
-  );
-  const recentTrips = trips.slice(0, 6);
-  const photosByTrip = await Promise.all(
-    recentTrips.map((trip) => getDestinationPhotos(trip.destination, 1)),
-  );
+  const sample = SAMPLE_ITINERARY;
 
   return (
-    <div className="space-y-8">
-      <div className="mx-auto max-w-xl text-center py-8">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          See the world before it changes.
-        </h1>
-        <p className="text-muted-foreground mt-2">Welcome back, {name}.</p>
-        <div className="mt-6">
-          <GenerateForm
-            key={destination ?? ""}
-            action={createTrip}
-            defaultValue={destination}
-          />
+    <div className="space-y-20 pb-8">
+      {/* ---------- Hero ---------- */}
+      <section className="grid items-center gap-10 pt-6 md:grid-cols-2 md:gap-8 md:pt-12">
+        <div className="text-center md:text-left">
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            See the world before it changes.
+          </h1>
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+            Geospace builds custom, day by day itineraries that lets you know
+            where you&apos;re actually going
+          </p>
+          <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center md:justify-start">
+            <Button asChild size="lg" className="h-11">
+              <a href="/auth/login?screen_hint=signup">Start planning free</a>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-11">
+              <a href="/auth/login">Log in</a>
+            </Button>
+          </div>
+          <p className="mt-4 text-sm">
+            <Link
+              href="/globe"
+              className="text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+            >
+              Explore the globe
+            </Link>
+          </p>
         </div>
-      </div>
 
-      {isProfileIncomplete(dbUser) && <ProfileNudge userId={dbUser.id} />}
+        <div className="flex justify-center">
+          <GlobeStill className="w-full max-w-md md:max-w-none" />
+        </div>
+      </section>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-medium">Recent trips</h2>
+      {/* ---------- How it works ---------- */}
+      <section>
+        <h2 className="text-center text-2xl font-semibold tracking-tight">
+          How it works
+        </h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {STEPS.map(({ icon: Icon, heading, body }) => (
+            <Card
+              key={heading}
+              className="border-border/50 bg-card/60 backdrop-blur-sm"
+            >
+              <CardHeader className="pb-3">
+                <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+                <CardTitle className="text-base">{heading}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{body}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
 
-        {recentTrips.length === 0 ? (
-          <Card className="border-dashed border-border/60 bg-card/40">
-            <CardContent className="py-12 text-center space-y-4">
-              <p className="text-muted-foreground">
-                No trips yet — try Kyoto, Lisbon, or Reykjavík.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {SUGGESTED_DESTINATIONS.map((city) => (
-                  <Link
-                    key={city}
-                    href={`/?destination=${encodeURIComponent(city)}`}
-                    className="rounded-4xl border border-border/60 bg-input/30 px-3 py-1.5 text-sm
-                               hover:bg-input/50 transition-colors"
-                  >
-                    {city}
-                  </Link>
-                ))}
+      {/* ---------- Sample itinerary ---------- */}
+      <section>
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {sample.destination}
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A real itinerary Geospace generated.
+          </p>
+        </div>
+
+        <div className="mt-8 space-y-6">
+          <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-2xl">{sample.destination}</CardTitle>
+                <Badge variant="secondary" className="shrink-0">
+                  Itinerary
+                </Badge>
               </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                {sample.data.destinationOverview}
+              </p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recentTrips.map((trip, i) => {
-              const photo = photosByTrip[i][0];
-              return (
-                <Link key={trip.id} href={`/dashboard/trips/${trip.id}`}>
-                  <Card
-                    className="h-full border-border/50 bg-card/60 backdrop-blur-sm transition-all
-                               hover:border-primary/40 hover:bg-card/80"
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{trip.destination}</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(trip.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </CardHeader>
-                    {photo && (
-                      <CardContent>
-                        <div className="aspect-[4/3] overflow-hidden rounded-lg">
-                          <img
-                            src={photo.src}
-                            alt={photo.title}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-                </Link>
-              );
-            })}
+
+          <ItineraryOverview data={sample.data} />
+        </div>
+
+        <div className="mt-8 text-center">
+          <Button asChild size="lg" className="h-11">
+            <a href="/auth/login?screen_hint=signup">
+              Plan one for your destination
+            </a>
+          </Button>
+        </div>
+      </section>
+
+      {/* ---------- Footer ---------- */}
+      <footer className="border-t border-border/50 pt-8">
+        <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground sm:flex-row sm:justify-between">
+          <p>© {new Date().getFullYear()} Geospace AI</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <a
+              href={GITHUB_REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              GitHub
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {CONTACT_EMAIL}
+            </a>
           </div>
-        )}
-      </div>
+        </div>
+      </footer>
     </div>
   );
 }
