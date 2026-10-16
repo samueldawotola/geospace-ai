@@ -6,15 +6,54 @@ import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { GenerateForm } from "@/components/generate-form";
 import { DeleteTripButton } from "@/components/delete-trip-button";
+import { ProfileNudge } from "@/components/profile-nudge";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 
-export default async function Dashboard() {
+const SUGGESTED_DESTINATIONS = ["Kyoto", "Lisbon", "Reykjavík"];
+
+function firstName(
+  displayName: string | null,
+  authName: string | null | undefined,
+  email: string,
+) {
+  const fromDisplay = displayName?.trim().split(/\s+/)[0];
+  if (fromDisplay) return fromDisplay;
+
+  const fromAuth = authName?.trim().split(/\s+/)[0];
+  if (fromAuth) return fromAuth;
+
+  const local = email.split("@")[0];
+  return local.charAt(0).toUpperCase() + local.slice(1);
+}
+
+function isProfileIncomplete(user: {
+  displayName: string | null;
+  dateOfBirth: string | null;
+  nationality: string | null;
+  travelStyle: string | null;
+  budget: string | null;
+}) {
+  return (
+    !user.displayName ||
+    !user.dateOfBirth ||
+    !user.nationality ||
+    !user.travelStyle ||
+    !user.budget
+  );
+}
+
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ destination?: string }>;
+}) {
   const session = await auth0.getSession();
 
+  // Logged-out visitors get the public landing page, not a login wall.
   if (!session) {
-    redirect("/auth/login");
+    redirect("/");
   }
   if (!session.user.email) {
     throw new Error("No email is associated with this account");
@@ -22,6 +61,8 @@ export default async function Dashboard() {
 
   const dbUser = await syncUser(session.user.sub, session.user.email);
   const userTrips = await getUserTrips(dbUser.id);
+  const { destination } = await searchParams;
+
   const photosByTrip = await Promise.all(
     userTrips.map((trip) => getDestinationPhotos(trip.destination, 1)),
   );
@@ -30,20 +71,38 @@ export default async function Dashboard() {
     "use server";
     const dest = formData.get("destination") as string;
     if (!dest?.trim()) return;
-    await generateTrip(dest);
+    const result = await generateTrip(dest);
+    if (result.trip) {
+      redirect(`/dashboard/trips/${result.trip.id}`);
+    }
   }
+
+  const name = firstName(
+    dbUser.displayName,
+    session.user.given_name ?? session.user.name,
+    session.user.email,
+  );
 
   return (
     <div className="space-y-10">
+      <TimeOfDayBackground />
+
       <div className="relative mx-auto max-w-xl text-center py-8">
         <h1 className="text-3xl font-semibold tracking-tight">Where to next?</h1>
         <p className="text-muted-foreground mt-2">
-          Tell us a destination — we'll build an itinerary tuned to your profile.
+          Welcome back, {name} — tell us a destination and we&apos;ll build an
+          itinerary tuned to your profile.
         </p>
         <div className="mt-6">
-          <GenerateForm action={createTrip} />
+          <GenerateForm
+            key={destination ?? ""}
+            action={createTrip}
+            defaultValue={destination}
+          />
         </div>
       </div>
+
+      {isProfileIncomplete(dbUser) && <ProfileNudge userId={dbUser.id} />}
 
       <div className="space-y-4">
         <div className="flex items-baseline justify-between">
@@ -56,9 +115,23 @@ export default async function Dashboard() {
         </div>
 
         {userTrips.length === 0 ? (
-          <Card className="border-dashed border-border/60 bg-card/40">
-            <CardContent className="py-16 text-center text-muted-foreground">
-              No trips yet — generate your first one above.
+          <Card className="tod-card border border-dashed ring-0 backdrop-blur-sm">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                No trips yet — try Kyoto, Lisbon, or Reykjavík.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {SUGGESTED_DESTINATIONS.map((city) => (
+                  <Link
+                    key={city}
+                    href={`/dashboard?destination=${encodeURIComponent(city)}`}
+                    className="rounded-4xl border border-border/60 bg-input/30 px-3 py-1.5 text-sm
+                               hover:bg-input/50 transition-colors"
+                  >
+                    {city}
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -68,10 +141,7 @@ export default async function Dashboard() {
               return (
                 <Card
                   key={trip.id}
-                  className="group relative overflow-hidden border-border/50
-                             bg-card/60 backdrop-blur-sm transition-all
-                             hover:border-primary/40 hover:bg-card/80
-                             hover:shadow-lg hover:shadow-primary/5"
+                  className="tod-card tod-card-interactive group relative overflow-hidden border ring-0 backdrop-blur-sm"
                 >
                   <Link
                     href={`/dashboard/trips/${trip.id}`}
@@ -83,11 +153,20 @@ export default async function Dashboard() {
                       <CardTitle className="text-base group-hover:text-primary transition-colors">
                         {trip.destination}
                       </CardTitle>
-                      <div className="relative z-10 flex shrink-0 items-center gap-1">
-                        <Badge variant="secondary">Itinerary</Badge>
-                        <DeleteTripButton tripId={trip.id} destination={trip.destination} />
+                      <div className="relative z-10 shrink-0">
+                        <DeleteTripButton
+                          tripId={trip.id}
+                          destination={trip.destination}
+                        />
                       </div>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(trip.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
                   </CardHeader>
                   {photo && (
                     <CardContent>

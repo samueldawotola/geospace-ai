@@ -125,3 +125,269 @@
     background-attachment: fixed;
   }
 }
+/* ---------- Time-of-day backdrop (src/components/time-of-day-background.tsx) ---------- */
+.tod-backdrop {
+  position: fixed;
+  inset: 0;
+  margin: 0; /* parents use space-y-*, whose margin would shrink a fixed inset box */
+  z-index: -1;
+  pointer-events: none;
+}
+.tod-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center bottom;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tod-layer { transition: none; }
+}
+/* Let the backdrop show through the body's own color/gradient. */
+body:has(.tod-backdrop) {
+  background: transparent;
+}
+/* Evening/Night art is dark: lighten page text, but keep cards as they are. */
+:root[data-time-tone="dark"] body:has(.tod-backdrop) main {
+  color: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.85 0.02 230);
+}
+:root[data-time-tone="dark"] body:has(.tod-backdrop) main [data-slot="card"]:not(.tod-card) {
+  --muted-foreground: oklch(0.556 0 0);
+}
+
+/* ---------- Top bar: moving lines tinted by time of day (src/components/nav.tsx) ----------
+   Adapted from shenanigans.shoghisimon.ca/collection/css. Colors come from
+   TIME_SLOT_CSS in src/lib/time-of-day.ts; @property lets them crossfade. */
+@property --tod-nav-base { syntax: "<color>"; inherits: true; initial-value: #07121F; }
+@property --tod-line-1 { syntax: "<color>"; inherits: true; initial-value: #CFDDEE; }
+@property --tod-line-2 { syntax: "<color>"; inherits: true; initial-value: #F3EBD8; }
+@property --tod-line-3 { syntax: "<color>"; inherits: true; initial-value: #7FA3B8; }
+@property --tod-btn-from { syntax: "<color>"; inherits: true; initial-value: #1F6F8B; }
+@property --tod-btn-to { syntax: "<color>"; inherits: true; initial-value: #3F8385; }
+@property --tod-btn-sparkle { syntax: "<color>"; inherits: true; initial-value: #CFEAF2; }
+:root {
+  transition: --tod-nav-base 1.2s ease, --tod-line-1 1.2s ease,
+    --tod-line-2 1.2s ease, --tod-line-3 1.2s ease,
+    --tod-btn-from 1.2s ease, --tod-btn-to 1.2s ease, --tod-btn-sparkle 1.2s ease;
+}
+.nav-meteors {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--tod-nav-base);
+}
+/* A rotated square big enough to cover any bar width: side >= (w + h) / sqrt 2. */
+.nav-meteors::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(75% + 150px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  rotate: -45deg;
+  background-image:
+    radial-gradient(4px 100px at 0px 235px, var(--tod-line-1), #0000),
+    radial-gradient(4px 100px at 300px 235px, var(--tod-line-1), #0000),
+    radial-gradient(1.5px 1.5px at 150px 117.5px, var(--tod-line-1) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 252px, var(--tod-line-2), #0000),
+    radial-gradient(4px 100px at 300px 252px, var(--tod-line-2), #0000),
+    radial-gradient(1.5px 1.5px at 150px 126px, var(--tod-line-2) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 150px, var(--tod-line-3), #0000),
+    radial-gradient(4px 100px at 300px 150px, var(--tod-line-3), #0000),
+    radial-gradient(1.5px 1.5px at 150px 75px, var(--tod-line-3) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 253px, var(--tod-line-1), #0000),
+    radial-gradient(4px 100px at 300px 253px, var(--tod-line-1), #0000),
+    radial-gradient(1.5px 1.5px at 150px 126.5px, var(--tod-line-1) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 204px, var(--tod-line-2), #0000),
+    radial-gradient(4px 100px at 300px 204px, var(--tod-line-2), #0000),
+    radial-gradient(1.5px 1.5px at 150px 102px, var(--tod-line-2) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 134px, var(--tod-line-3), #0000),
+    radial-gradient(4px 100px at 300px 134px, var(--tod-line-3), #0000),
+    radial-gradient(1.5px 1.5px at 150px 67px, var(--tod-line-3) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 179px, var(--tod-line-1), #0000),
+    radial-gradient(4px 100px at 300px 179px, var(--tod-line-1), #0000),
+    radial-gradient(1.5px 1.5px at 150px 89.5px, var(--tod-line-1) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 299px, var(--tod-line-2), #0000),
+    radial-gradient(4px 100px at 300px 299px, var(--tod-line-2), #0000),
+    radial-gradient(1.5px 1.5px at 150px 149.5px, var(--tod-line-2) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 215px, var(--tod-line-3), #0000),
+    radial-gradient(4px 100px at 300px 215px, var(--tod-line-3), #0000),
+    radial-gradient(1.5px 1.5px at 150px 107.5px, var(--tod-line-3) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 281px, var(--tod-line-1), #0000),
+    radial-gradient(4px 100px at 300px 281px, var(--tod-line-1), #0000),
+    radial-gradient(1.5px 1.5px at 150px 140.5px, var(--tod-line-1) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 158px, var(--tod-line-2), #0000),
+    radial-gradient(4px 100px at 300px 158px, var(--tod-line-2), #0000),
+    radial-gradient(1.5px 1.5px at 150px 79px, var(--tod-line-2) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 210px, var(--tod-line-3), #0000),
+    radial-gradient(4px 100px at 300px 210px, var(--tod-line-3), #0000),
+    radial-gradient(1.5px 1.5px at 150px 105px, var(--tod-line-3) 100%, #0000 150%);
+  background-size:
+    300px 235px,
+    300px 235px,
+    300px 235px,
+    300px 252px,
+    300px 252px,
+    300px 252px,
+    300px 150px,
+    300px 150px,
+    300px 150px,
+    300px 253px,
+    300px 253px,
+    300px 253px,
+    300px 204px,
+    300px 204px,
+    300px 204px,
+    300px 134px,
+    300px 134px,
+    300px 134px,
+    300px 179px,
+    300px 179px,
+    300px 179px,
+    300px 299px,
+    300px 299px,
+    300px 299px,
+    300px 215px,
+    300px 215px,
+    300px 215px,
+    300px 281px,
+    300px 281px,
+    300px 281px,
+    300px 158px,
+    300px 158px,
+    300px 158px,
+    300px 210px,
+    300px 210px,
+    300px 210px;
+  animation: nav-meteors 150s linear infinite;
+}
+@keyframes nav-meteors {
+  0% {
+    background-position:
+      0px 220px,
+      3px 220px,
+      151.5px 337.5px,
+      25px 24px,
+      28px 24px,
+      176.5px 150px,
+      50px 16px,
+      53px 16px,
+      201.5px 91px,
+      75px 224px,
+      78px 224px,
+      226.5px 350.5px,
+      100px 19px,
+      103px 19px,
+      251.5px 121px,
+      125px 120px,
+      128px 120px,
+      276.5px 187px,
+      150px 31px,
+      153px 31px,
+      301.5px 120.5px,
+      175px 235px,
+      178px 235px,
+      326.5px 384.5px,
+      200px 121px,
+      203px 121px,
+      351.5px 228.5px,
+      225px 224px,
+      228px 224px,
+      376.5px 364.5px,
+      250px 26px,
+      253px 26px,
+      401.5px 105px,
+      275px 75px,
+      278px 75px,
+      426.5px 180px;
+  }
+  to {
+    background-position:
+      0px 6800px,
+      3px 6800px,
+      151.5px 6917.5px,
+      25px 13632px,
+      28px 13632px,
+      176.5px 13758px,
+      50px 5416px,
+      53px 5416px,
+      201.5px 5491px,
+      75px 17175px,
+      78px 17175px,
+      226.5px 17301.5px,
+      100px 5119px,
+      103px 5119px,
+      251.5px 5221px,
+      125px 8428px,
+      128px 8428px,
+      276.5px 8495px,
+      150px 9876px,
+      153px 9876px,
+      301.5px 9965.5px,
+      175px 13391px,
+      178px 13391px,
+      326.5px 13540.5px,
+      200px 14741px,
+      203px 14741px,
+      351.5px 14848.5px,
+      225px 18770px,
+      228px 18770px,
+      376.5px 18910.5px,
+      250px 5082px,
+      253px 5082px,
+      401.5px 5161px,
+      275px 6375px,
+      278px 6375px,
+      426.5px 6480px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { transition: none; }
+  .nav-meteors::before { animation: none; }
+}
+
+/* ---------- Blocks tinted by time of day (dashboard, trip pages, sample itinerary) ----------
+   Colors come from TIME_SLOT_CSS; light slots get pale glass, Evening/Night dark glass.
+   --primary is the slot accent, so links and hover titles stay legible. */
+.tod-card {
+  background-color: var(--tod-card-bg, rgb(255 255 255 / 0.6));
+  border-color: var(--tod-card-border, transparent);
+  color: var(--tod-card-fg, inherit);
+  --muted-foreground: var(--tod-card-muted, oklch(0.556 0 0));
+  --primary: var(--tod-card-accent, oklch(0.205 0 0));
+  /* Inner labels, dividers, badges and the active tab follow the tint too. */
+  --foreground: var(--tod-card-fg, oklch(0.145 0 0));
+  --border: color-mix(in oklab, var(--tod-card-fg, #000) 18%, transparent);
+  --secondary: color-mix(in oklab, var(--tod-card-accent, #000) 16%, transparent);
+  --secondary-foreground: var(--tod-card-fg, oklch(0.205 0 0));
+  --card: color-mix(in oklab, var(--tod-card-accent, #fff) 22%, transparent);
+  /* Form fields (profile page): soft borders/fills, accent focus rings and ticks. */
+  --input: color-mix(in oklab, var(--tod-card-fg, #000) 22%, transparent);
+  --ring: var(--tod-card-accent, oklch(0.708 0 0));
+  --primary-foreground: var(--tod-card-on-accent, oklch(0.985 0 0));
+  transition: background-color 1.2s ease, border-color 1.2s ease, color 1.2s ease, box-shadow 0.2s ease;
+}
+.tod-card-interactive:hover {
+  background-color: var(--tod-card-hover, rgb(255 255 255 / 0.8));
+  border-color: color-mix(in oklab, var(--tod-card-accent, #000) 45%, transparent);
+  box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--tod-card-accent, #000) 40%, transparent);
+}
+/* Native widgets (date picker icon, scrollbars) match dark glass at Evening/Night. */
+:root[data-time-tone="dark"] .tod-card {
+  color-scheme: dark;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tod-card { transition: none; }
+}
+
+/* ---------- Dot cursor (src/components/dot-cursor.tsx) ----------
+   Set on <html> while the custom cursor is drawing; !important beats the
+   cursor: pointer / text that links, buttons and fields set on themselves. */
+.dot-cursor-on,
+.dot-cursor-on * {
+  cursor: none !important;
+}

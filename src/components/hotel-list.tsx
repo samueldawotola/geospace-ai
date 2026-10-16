@@ -14,7 +14,7 @@ function formatPriceLevel(level: string): string {
 export function HotelList({ hotels }: { hotels: CachedHotel[] }) {
   if (hotels.length === 0) {
     return (
-      <Card className="border-dashed border-border/60 bg-card/40">
+      <Card className="tod-card border border-dashed ring-0 backdrop-blur-sm">
         <CardContent className="py-16 text-center text-muted-foreground">
           No hotels or stays found yet for this destination.
         </CardContent>
@@ -27,7 +27,7 @@ export function HotelList({ hotels }: { hotels: CachedHotel[] }) {
       {hotels.map((hotel) => (
         <Card
           key={hotel.id}
-          className="border-border/50 bg-card/60 backdrop-blur-sm"
+          className="tod-card border ring-0 backdrop-blur-sm"
         >
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-2">
