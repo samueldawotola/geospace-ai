@@ -1,6 +1,7 @@
 import { auth0 } from "@/lib/auth0";
 import { syncUser } from "@/db/users";
 import ImmersiveGlobe from "@/components/immersive-globe";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 
 export const metadata = {
   title: "Immersive Globe",
@@ -18,6 +19,7 @@ export default async function GlobePage() {
 
   return (
     <div className="p-4">
+      <TimeOfDayBackground />
       <h1 className="mb-3 text-2xl font-semibold">Immersive Globe</h1>
       {/* Subtract your nav shell height here if 4rem isn't right */}
       <div className="h-[calc(100vh-9rem)] w-full">

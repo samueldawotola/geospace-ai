@@ -13,6 +13,7 @@ import { HotelList } from "@/components/hotel-list";
 import { StickyScrollCards } from "@/components/ui/sticky-scroll-cards";
 import { SkipToInfoLink } from "@/components/skip-to-info-link";
 import { ItineraryOverview } from "@/components/itinerary-overview";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 
 export default async function TripDetail({
   params,
@@ -43,6 +44,8 @@ export default async function TripDetail({
 
   return (
     <div className="space-y-6">
+      <TimeOfDayBackground />
+
       <Link
         href="/dashboard"
         className="fixed left-4 top-1/2 z-40 -translate-y-1/2 text-base font-medium text-muted-foreground hover:text-primary transition-colors md:left-8"
@@ -50,15 +53,14 @@ export default async function TripDetail({
         ← Back to trips
       </Link>
 
+      {/* Mirrors "Back to trips": same height, opposite edge. */}
       {photos.length > 0 && (
-        <div className="flex justify-end">
-          <SkipToInfoLink
-            targetId="trip-info"
-            className="text-base font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            Skip to info ↓
-          </SkipToInfoLink>
-        </div>
+        <SkipToInfoLink
+          targetId="trip-info"
+          className="fixed right-4 top-1/2 z-40 -translate-y-1/2 text-base font-medium text-muted-foreground hover:text-primary transition-colors md:right-8"
+        >
+          Skip to info ↓
+        </SkipToInfoLink>
       )}
 
       {photos.length > 0 && (
@@ -68,7 +70,7 @@ export default async function TripDetail({
         />
       )}
 
-      <Card id="trip-info" className="border-border/50 bg-card/60 backdrop-blur-sm scroll-mt-20">
+      <Card id="trip-info" className="tod-card border ring-0 backdrop-blur-sm scroll-mt-20">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-2xl">{trip.destination}</CardTitle>
@@ -91,7 +93,7 @@ export default async function TripDetail({
 
       {trip.data && (
         <Tabs defaultValue="overview">
-          <TabsList>
+          <TabsList className="tod-card border backdrop-blur-sm">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="hotels">
               Hotels &amp; Stays

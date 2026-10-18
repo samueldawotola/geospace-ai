@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ItineraryOverview } from "@/components/itinerary-overview";
 import { GlobeStill } from "@/components/globe-still";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 import { SAMPLE_ITINERARY } from "@/lib/sample-itinerary";
 
 const GITHUB_REPO = "https://github.com/samueldawotola/geospace-ai";
@@ -42,6 +43,8 @@ export default async function LandingPage() {
 
   return (
     <div className="space-y-20 pb-8">
+      <TimeOfDayBackground />
+
       {/* ---------- Hero ---------- */}
       <section className="grid items-center gap-10 pt-6 md:grid-cols-2 md:gap-8 md:pt-12">
         <div className="text-center md:text-left">
@@ -110,7 +113,7 @@ export default async function LandingPage() {
         </div>
 
         <div className="mt-8 space-y-6">
-          <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+          <Card className="tod-card border ring-0 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-2xl">{sample.destination}</CardTitle>

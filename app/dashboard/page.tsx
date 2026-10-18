@@ -6,10 +6,10 @@ import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { GenerateForm } from "@/components/generate-form";
 import { DeleteTripButton } from "@/components/delete-trip-button";
 import { ProfileNudge } from "@/components/profile-nudge";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 
 const SUGGESTED_DESTINATIONS = ["Kyoto", "Lisbon", "Reykjavík"];
 
@@ -85,6 +85,8 @@ export default async function Dashboard({
 
   return (
     <div className="space-y-10">
+      <TimeOfDayBackground />
+
       <div className="relative mx-auto max-w-xl text-center py-8">
         <h1 className="text-3xl font-semibold tracking-tight">Where to next?</h1>
         <p className="text-muted-foreground mt-2">
@@ -113,7 +115,7 @@ export default async function Dashboard({
         </div>
 
         {userTrips.length === 0 ? (
-          <Card className="border-dashed border-border/60 bg-card/40">
+          <Card className="tod-card border border-dashed ring-0 backdrop-blur-sm">
             <CardContent className="py-12 text-center space-y-4">
               <p className="text-muted-foreground">
                 No trips yet — try Kyoto, Lisbon, or Reykjavík.
@@ -139,10 +141,7 @@ export default async function Dashboard({
               return (
                 <Card
                   key={trip.id}
-                  className="group relative overflow-hidden border-border/50
-                             bg-card/60 backdrop-blur-sm transition-all
-                             hover:border-primary/40 hover:bg-card/80
-                             hover:shadow-lg hover:shadow-primary/5"
+                  className="tod-card tod-card-interactive group relative overflow-hidden border ring-0 backdrop-blur-sm"
                 >
                   <Link
                     href={`/dashboard/trips/${trip.id}`}
@@ -154,8 +153,7 @@ export default async function Dashboard({
                       <CardTitle className="text-base group-hover:text-primary transition-colors">
                         {trip.destination}
                       </CardTitle>
-                      <div className="relative z-10 flex shrink-0 items-center gap-1">
-                        <Badge variant="secondary">Itinerary</Badge>
+                      <div className="relative z-10 shrink-0">
                         <DeleteTripButton
                           tripId={trip.id}
                           destination={trip.destination}

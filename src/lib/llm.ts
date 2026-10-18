@@ -45,6 +45,19 @@ function buildPreferences(p: TravelerProfile): string {
   return lines.join("\n");
 }
 
+// The app underlines [[bracketed]] text in these fields (src/components/
+// marked-text.tsx), so the model flags what a traveler must not miss.
+const EMPHASIS_RULE_CORE = [
+  "Emphasis: in packingList items and localTips only, wrap the most crucial word",
+  "or short phrase in [[double square brackets]] so the app can underline it.",
+  "Packing: bracket only the few items a traveler truly cannot forget or replace",
+  "locally (e.g. \"[[Passport]]\", \"[[Type A power adapter]]\"), not routine items.",
+  "Tips: bracket the key action or fact a traveler must not miss (e.g. \"Carry",
+  "[[cash]]; many small temples don't take cards\"). At most one bracket per item,",
+  "many items need none, never bracket a whole tip, and never use brackets or any",
+  "other formatting characters in any other field.",
+].join(" ");
+
 // ---------- Lane A: schema for the "pure generation" sections ----------
 const itinerarySchema = {
   type: "object",
@@ -196,7 +209,8 @@ async function generateCoreSections(destination: string, preferences: string): P
         content:
           "You are Geospace AI's travel planner. Tailor everything to the traveler's " +
           "profile. Budget numbers are realistic estimates for the destination in a " +
-          "typical home currency (default USD if unclear). Be specific and practical.",
+          "typical home currency (default USD if unclear). Be specific and practical.\n\n" +
+          EMPHASIS_RULE_CORE,
       },
       { role: "user", content: `Plan a trip using this profile:\n\n${ctx}` },
     ],
@@ -236,8 +250,17 @@ Voice:
 - Do not restate the traveler profile back ("Given the traveler is 17...").
   Apply it silently and state conclusions directly.
 
+Emphasis (the one exception to "no formatting characters"):
+- In riskFactors body only, wrap the single most crucial word or short phrase
+  of a sentence in [[double square brackets]] — the hazard, the precaution, or
+  the official instruction a traveler must not miss, e.g. "Check [[hazard maps]]
+  and know shelter routes." At most one per sentence, and only when one phrase
+  clearly matters more than the rest; many sentences need none. Never bracket a
+  whole sentence, and never use brackets in any other field.
+
 Field notes:
-- riskFactors: label is 2-4 words, body is 2-4 sentences.
+- riskFactors: label is 2-4 words, body is 2-4 short sentences (the app shows
+  each sentence as its own bullet point).
 - creatorTypes: describe what creators cover, never name individuals.
 - searchTerms: literal strings a user could paste into a search box.
 - housingPlan.recommendation is one line naming lodging type and area.
@@ -279,16 +302,40 @@ async function generateGroundedSections(
   return JSON.parse(response.output_text) as GroundedSections;
 }
 
+// Brackets are only rendered as underlines in packing items, local tips and
+// risk-factor bodies; strip any the model leaves elsewhere so they never show.
+function stripMarks<T>(value: T): T {
+  if (typeof value === "string") return value.replace(/\[\[|\]\]/g, "") as T;
+  if (Array.isArray(value)) return value.map(stripMarks) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stripMarks(v)])) as T;
+  }
+  return value;
+}
+
+function keepMarksOnlyWhereRendered(core: CoreSections, grounded: GroundedSections) {
+  const { packingList, localTips, ...restCore } = core;
+  const { riskFactors, ...restGrounded } = grounded;
+  return {
+    core: { ...stripMarks(restCore), packingList, localTips },
+    grounded: {
+      ...stripMarks(restGrounded),
+      riskFactors: riskFactors.map(({ body, ...r }) => ({ ...stripMarks(r), body })),
+    },
+  };
+}
+
 export async function generateTripContent(
   destination: string,
   profile: TravelerProfile = {}
 ): Promise<{ summary: string; data: TripPlan }> {
   const preferences = buildPreferences(profile);
 
-  const [core, grounded] = await Promise.all([
+  const [rawCore, rawGrounded] = await Promise.all([
     generateCoreSections(destination, preferences),
     generateGroundedSections(destination, preferences),
   ]);
+  const { core, grounded } = keepMarksOnlyWhereRendered(rawCore, rawGrounded);
 
   return {
     summary: core.destinationOverview,
