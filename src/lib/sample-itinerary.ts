@@ -69,11 +69,11 @@ export const SAMPLE_ITINERARY: {
         {
           "category": "Essentials",
           "items": [
-            "Passport",
+            "[[Passport]]",
             "Transit card or card-compatible payment method",
             "Portable phone charger",
-            "Cash in yen for smaller shops and shrines",
-            "Travel insurance information"
+            "[[Cash in yen]] for smaller shops and shrines",
+            "[[Travel insurance]] information"
           ]
         },
         {
@@ -108,49 +108,49 @@ export const SAMPLE_ITINERARY: {
         "notes": "Estimated for 5 days in Kyoto for one traveler, assuming mid-range hotel or ryokan-style lodging, a mix of casual meals and a few nicer dinners, standard admissions, and local transit. Costs can be lower with business hotels and higher if you choose a luxury ryokan or several premium meals."
       },
       "localTips": [
-        "Buy an IC transit card and use it for buses, subways, and trains to simplify travel.",
+        "Buy an [[IC transit card]] and use it for buses, subways, and trains to simplify travel.",
         "Start popular sights early, especially Fushimi Inari, Arashiyama, and Kiyomizu-dera.",
-        "Carry some cash; smaller temples, cafés, and local shops may not accept cards.",
+        "Carry some [[cash]]; smaller temples, cafés, and local shops may not accept cards.",
         "Be respectful in residential lanes like Gion—keep noise down and avoid blocking geisha or maiko.",
         "Plan meals around location clusters to reduce backtracking.",
-        "Check temple opening hours in advance, as some close earlier than expected.",
-        "If traveling in peak season, reserve lodging and any special dining experiences well ahead of time."
+        "Check [[temple opening hours]] in advance, as some close earlier than expected.",
+        "If traveling in peak season, [[reserve lodging]] and any special dining experiences well ahead of time."
       ],
       "grounded": {
         "riskFactors": [
           {
             "label": "Low crime",
-            "body": "Crime against U.S. citizens in Japan is low, but theft and opportunistic incidents can still occur in crowded tourist areas and transit hubs. Keep normal urban precautions and monitor belongings closely in busy districts.",
+            "body": "Crime against U.S. citizens in Japan is low, but theft and opportunistic incidents can still occur in crowded tourist areas and transit hubs. Keep normal urban precautions and [[monitor belongings]] closely in busy districts.",
             "sourceUrl": "https://travel.state.gov/en/international-travel/travel-advisories/japan.html",
             "sourceName": "U.S. Department of State"
           },
           {
             "label": "Discrimination risk",
-            "body": "Some U.S. citizens have reported discrimination because of nationality or race. Japan law protects against disability discrimination, but enforcement is uneven, and accessibility can be limited in older buildings.",
+            "body": "Some U.S. citizens have reported discrimination because of nationality or race. Japan law protects against disability discrimination, but enforcement is uneven, and accessibility can be [[limited in older buildings]].",
             "sourceUrl": "https://travel.state.gov/en/international-travel/travel-advisories/japan.html",
             "sourceName": "U.S. Department of State"
           },
           {
             "label": "Age safety",
-            "body": "Japan is generally safe for younger travelers, but crowded nightlife and transit areas can increase the risk of separation, exploitation, or getting lost. Younger travelers should use official transport and maintain clear check-in plans.",
+            "body": "Japan is generally safe for younger travelers, but crowded nightlife and transit areas can increase the risk of separation, exploitation, or getting lost. Younger travelers should use [[official transport]] and maintain clear check-in plans.",
             "sourceUrl": "https://travel.state.gov/en/international-travel/travel-advisories/japan.html",
             "sourceName": "U.S. Department of State"
           },
           {
             "label": "Earthquake risk",
-            "body": "Kyoto is subject to earthquake risk, and local disaster guidance urges households and visitors to prepare evacuation plans in advance. Check hazard maps and know shelter routes before arrival.",
+            "body": "Kyoto is subject to earthquake risk, and local disaster guidance urges households and visitors to prepare evacuation plans in advance. Check [[hazard maps]] and know shelter routes before arrival.",
             "sourceUrl": "https://www.bousai.city.kyoto.lg.jp/0000000146.html",
             "sourceName": "Kyoto City Disaster Prevention Portal"
           },
           {
             "label": "Flood and typhoon",
-            "body": "Kyoto faces heavy-rain, flood, and typhoon hazards, including river flooding and inland flooding. The prefecture and city both advise confirming evacuation areas and routes when weather conditions worsen.",
+            "body": "Kyoto faces heavy-rain, flood, and typhoon hazards, including river flooding and inland flooding. The prefecture and city both advise confirming [[evacuation areas and routes]] when weather conditions worsen.",
             "sourceUrl": "https://www.pref.kyoto.jp/en/04-06-03.html",
             "sourceName": "Kyoto Prefecture"
           },
           {
             "label": "Heat and mosquitoes",
-            "body": "CDC advises that heat-related illness can be deadly and that mosquito bites can spread illness in Japan. Use insect repellent, stay hydrated, and limit exposure during the hottest parts of the day.",
+            "body": "CDC advises that heat-related illness can be deadly and that mosquito bites can spread illness in Japan. Use [[insect repellent]], stay hydrated, and limit exposure during the hottest parts of the day.",
             "sourceUrl": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/japan",
             "sourceName": "CDC Travelers' Health"
           }

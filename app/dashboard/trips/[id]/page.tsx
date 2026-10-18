@@ -13,6 +13,7 @@ import { HotelList } from "@/components/hotel-list";
 import { StickyScrollCards } from "@/components/ui/sticky-scroll-cards";
 import { SkipToInfoLink } from "@/components/skip-to-info-link";
 import { ItineraryOverview } from "@/components/itinerary-overview";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 
 export default async function TripDetail({
   params,

@@ -3,6 +3,10 @@ import "./globals.css";
 import Nav from "@/components/nav";
 import { auth0 } from "@/lib/auth0";
 import { SITE_URL } from "@/lib/site";
+import { InlineScript } from "@/components/inline-script";
+import TimeSlotSync from "@/components/time-slot-sync";
+import TimeOfDayCursor from "@/components/time-of-day-cursor";
+import { TIME_SLOT_CSS, TIME_SLOT_SCRIPT } from "@/lib/time-of-day";
 
 const TITLE = "Geospace AI — See the world before it changes.";
 const DESCRIPTION =
@@ -54,6 +58,7 @@ export default async function RootLayout({
         <InlineScript html={TIME_SLOT_SCRIPT} />
       </head>
       <body className="min-h-screen bg-[#7FB3A9] text-black">
+        <TimeSlotSync />
         <Nav signedIn={Boolean(session)} />
         <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
         <TimeOfDayCursor />

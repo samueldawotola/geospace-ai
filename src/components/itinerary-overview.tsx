@@ -1,6 +1,8 @@
 import type { TripPlan } from "@/db/schema";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DayByDay } from "@/components/day-by-day";
+import { Marked, splitSentences } from "@/components/marked-text";
 
 /**
  * The body of a trip's "Overview" tab. Extracted from
@@ -13,35 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function ItineraryOverview({ data }: { data: TripPlan }) {
   return (
     <div className="space-y-6">
-      <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Day by day</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {data.itinerary.map((day) => (
-            <div key={day.day} className="border-l-2 border-primary/30 pl-4">
-              <p className="font-medium text-sm">
-                Day {day.day} — {day.title}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium text-foreground/80">Morning: </span>
-                {day.morning}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium text-foreground/80">Afternoon: </span>
-                {day.afternoon}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium text-foreground/80">Evening: </span>
-                {day.evening}
-              </p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <DayByDay days={data.itinerary} />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+        <Card className="tod-card border ring-0 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Packing list</CardTitle>
           </CardHeader>
@@ -49,15 +26,19 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
             {data.packingList.map((group) => (
               <div key={group.category}>
                 <p className="text-sm font-medium">{group.category}</p>
-                <p className="text-sm text-muted-foreground">
-                  {group.items.join(", ")}
-                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-muted-foreground marker:text-primary/70">
+                  {group.items.map((item, i) => (
+                    <li key={i}>
+                      <Marked text={item} />
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+        <Card className="tod-card border ring-0 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Budget breakdown</CardTitle>
           </CardHeader>
@@ -101,14 +82,16 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
       </div>
 
       {data.localTips.length > 0 && (
-        <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+        <Card className="tod-card border ring-0 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Local tips</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground marker:text-primary/70">
               {data.localTips.map((tip, i) => (
-                <li key={i}>{tip}</li>
+                <li key={i}>
+                  <Marked text={tip} />
+                </li>
               ))}
             </ul>
           </CardContent>
@@ -116,7 +99,7 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
       )}
 
       {data.grounded && data.grounded.riskFactors.length > 0 && (
-        <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+        <Card className="tod-card border ring-0 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Risk factors</CardTitle>
           </CardHeader>
@@ -124,13 +107,19 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
             {data.grounded.riskFactors.map((risk) => (
               <div key={risk.label}>
                 <p className="text-sm font-medium">{risk.label}</p>
-                <p className="text-sm text-muted-foreground mt-1">{risk.body}</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-muted-foreground marker:text-primary/70">
+                  {splitSentences(risk.body).map((sentence, i) => (
+                    <li key={i}>
+                      <Marked text={sentence} />
+                    </li>
+                  ))}
+                </ul>
                 {risk.sourceUrl && (
                   <a
                     href={risk.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-primary underline"
+                    className="mt-1.5 inline-block text-xs text-primary underline"
                   >
                     {risk.sourceName}
                   </a>
@@ -142,7 +131,7 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
       )}
 
       {data.grounded && (
-        <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+        <Card className="tod-card border ring-0 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Online content</CardTitle>
           </CardHeader>
@@ -151,17 +140,7 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
               <p className="text-sm font-medium">Official sources</p>
               <ul className="text-sm text-muted-foreground space-y-1 mt-1">
                 {data.grounded.onlineContent.officialSources.map((s) => (
-                  <li key={s.url}>
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      {s.name}
-                    </a>{" "}
-                    — {s.note}
-                  </li>
+                  <SourceItem key={s.url || s.name} source={s} />
                 ))}
               </ul>
             </div>
@@ -170,17 +149,7 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
               <p className="text-sm font-medium">Community sources</p>
               <ul className="text-sm text-muted-foreground space-y-1 mt-1">
                 {data.grounded.onlineContent.communitySources.map((s) => (
-                  <li key={s.url}>
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      {s.name}
-                    </a>{" "}
-                    — {s.note}
-                  </li>
+                  <SourceItem key={s.url || s.name} source={s} />
                 ))}
               </ul>
             </div>
@@ -207,7 +176,7 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
       )}
 
       {data.grounded && (
-        <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+        <Card className="tod-card border ring-0 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Housing plan</CardTitle>
           </CardHeader>
@@ -233,5 +202,29 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
         </Card>
       )}
     </div>
+  );
+}
+
+type Source = TripPlan["grounded"]["onlineContent"]["officialSources"][number];
+
+// The model sometimes names a source without a URL; show it as plain text
+// rather than an empty link that reloads the page.
+function SourceItem({ source }: { source: Source }) {
+  return (
+    <li>
+      {source.url ? (
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline"
+        >
+          {source.name}
+        </a>
+      ) : (
+        <span className="font-medium text-foreground/80">{source.name}</span>
+      )}{" "}
+      — {source.note}
+    </li>
   );
 }
