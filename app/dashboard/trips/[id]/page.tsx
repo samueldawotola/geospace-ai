@@ -75,7 +75,15 @@ export default async function TripDetail({
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-2xl">{trip.destination}</CardTitle>
             <div className="flex shrink-0 items-center gap-1">
-              <Badge variant="secondary">Itinerary</Badge>
+              <Badge variant="secondary">
+                {trip.days} {trip.days === 1 ? "day" : "days"}
+              </Badge>
+              <Link
+                href={`/globe?destination=${encodeURIComponent(trip.destination)}`}
+                className="px-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                View on globe
+              </Link>
               <DeleteTripButton
                 tripId={trip.id}
                 destination={trip.destination}

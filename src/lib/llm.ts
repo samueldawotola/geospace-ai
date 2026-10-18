@@ -196,10 +196,13 @@ type CoreSections = Omit<TripPlan, "grounded">;
 type GroundedSections = TripPlan["grounded"];
 
 // ---------- Lane A call: structured, no tools ----------
-async function generateCoreSections(destination: string, preferences: string): Promise<CoreSections> {
-  const ctx = preferences
-    ? `Destination: ${destination}\nTrip length: 5 days\n\nTraveler profile:\n${preferences}`
-    : `Destination: ${destination}\nTrip length: 5 days`;
+async function generateCoreSections(
+  destination: string,
+  days: number,
+  preferences: string
+): Promise<CoreSections> {
+  const trip = `Destination: ${destination}\nTrip length: ${days} ${days === 1 ? "day" : "days"}`;
+  const ctx = preferences ? `${trip}\n\nTraveler profile:\n${preferences}` : trip;
 
   const response = await openai.responses.create({
     model: MODEL,
@@ -212,7 +215,13 @@ async function generateCoreSections(destination: string, preferences: string): P
           "typical home currency (default USD if unclear). Be specific and practical.\n\n" +
           EMPHASIS_RULE_CORE,
       },
-      { role: "user", content: `Plan a trip using this profile:\n\n${ctx}` },
+      {
+        role: "user",
+        content:
+          `Plan a ${days}-day trip to ${destination}. The itinerary must contain ` +
+          `exactly ${days} entries, numbered day 1 through day ${days}, and the ` +
+          `budget must cover all ${days} days.\n\n${ctx}`,
+      },
     ],
     text: {
       format: {
@@ -269,11 +278,11 @@ Field notes:
 
 async function generateGroundedSections(
   destination: string,
+  days: number,
   preferences: string
 ): Promise<GroundedSections> {
-  const ctx = preferences
-    ? `Destination: ${destination}\n\nTraveler profile:\n${preferences}`
-    : `Destination: ${destination}`;
+  const trip = `Destination: ${destination}\nTrip length: ${days} ${days === 1 ? "day" : "days"}`;
+  const ctx = preferences ? `${trip}\n\nTraveler profile:\n${preferences}` : trip;
 
   const response = await openai.responses.create({
     model: MODEL,
@@ -327,13 +336,14 @@ function keepMarksOnlyWhereRendered(core: CoreSections, grounded: GroundedSectio
 
 export async function generateTripContent(
   destination: string,
+  days: number,
   profile: TravelerProfile = {}
 ): Promise<{ summary: string; data: TripPlan }> {
   const preferences = buildPreferences(profile);
 
   const [rawCore, rawGrounded] = await Promise.all([
-    generateCoreSections(destination, preferences),
-    generateGroundedSections(destination, preferences),
+    generateCoreSections(destination, days, preferences),
+    generateGroundedSections(destination, days, preferences),
   ]);
   const { core, grounded } = keepMarksOnlyWhereRendered(rawCore, rawGrounded);
 

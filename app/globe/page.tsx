@@ -8,7 +8,12 @@ export const metadata = {
   description: "See the world before it changes.",
 };
 
-export default async function GlobePage() {
+export default async function GlobePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ destination?: string }>;
+}) {
+  const { destination } = await searchParams;
   const session = await auth0.getSession();
 
   // Public view — no auth gate. syncUser() inserts a users row, so it is the
@@ -23,7 +28,7 @@ export default async function GlobePage() {
       <h1 className="mb-3 text-2xl font-semibold">Immersive Globe</h1>
       {/* Subtract your nav shell height here if 4rem isn't right */}
       <div className="h-[calc(100vh-9rem)] w-full">
-        <ImmersiveGlobe />
+        <ImmersiveGlobe initialDestination={destination?.trim() || undefined} />
       </div>
     </div>
   );

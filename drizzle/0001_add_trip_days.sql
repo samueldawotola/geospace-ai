@@ -1,0 +1,1 @@
+ALTER TABLE "trips" ADD COLUMN "days" integer DEFAULT 5 NOT NULL;
