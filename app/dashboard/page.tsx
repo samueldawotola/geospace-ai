@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GenerateForm } from "@/components/generate-form";
 import { DeleteTripButton } from "@/components/delete-trip-button";
 import { ProfileNudge } from "@/components/profile-nudge";
-import TimeOfDayBackground from "@/components/time-of-day-background";
 
 const SUGGESTED_DESTINATIONS = ["Kyoto", "Lisbon", "Reykjavík"];
 
@@ -115,7 +114,7 @@ export default async function Dashboard({
         </div>
 
         {userTrips.length === 0 ? (
-          <Card className="tod-card border border-dashed ring-0 backdrop-blur-sm">
+          <Card className="border-dashed border-border/60 bg-card/40">
             <CardContent className="py-12 text-center space-y-4">
               <p className="text-muted-foreground">
                 No trips yet — try Kyoto, Lisbon, or Reykjavík.
@@ -153,7 +152,8 @@ export default async function Dashboard({
                       <CardTitle className="text-base group-hover:text-primary transition-colors">
                         {trip.destination}
                       </CardTitle>
-                      <div className="relative z-10 shrink-0">
+                      <div className="relative z-10 flex shrink-0 items-center gap-1">
+                        <Badge variant="secondary">Itinerary</Badge>
                         <DeleteTripButton
                           tripId={trip.id}
                           destination={trip.destination}
