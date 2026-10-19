@@ -1,11 +1,19 @@
 "use client";
 
+import { useActionState, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import {
+  MAX_DAYS,
+  MIN_DAYS,
+  validateTripInput,
+  type TripInputErrors,
+} from "@/lib/trip-input";
 
 // Sparkle button, adapted from Uiverse.io by ilkhoeri. Every size derives from
-// --sz-btn, set to 44px (h-11) to line up with the destination input. Colors
+// --sz-btn, set to 44px (h-11) to line up with the trip inputs. Colors
 // follow the time of day (--tod-btn-* from src/lib/time-of-day.ts).
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -31,7 +39,7 @@ function SubmitButton() {
         </svg>
       )}
       {/* Both states share one grid cell, so the button stays sized to
-          "Generate" (plus room for the sparkle) and the input beside it
+          "Generate" (plus room for the sparkle) and the inputs beside it
           doesn't jump when a trip starts. */}
       <span className="grid place-items-center text-base font-extrabold leading-none text-white">
         <span
@@ -48,24 +56,102 @@ function SubmitButton() {
   );
 }
 
+export type GenerateFormState = {
+  error?: string;
+  fieldErrors?: TripInputErrors;
+};
+
+const inputClass =
+  "h-11 bg-card/60 backdrop-blur-sm border-border/60 focus-visible:ring-primary/40";
+
 export function GenerateForm({
   action,
-  defaultValue,
+  defaultDestination,
 }: {
-  action: (formData: FormData) => Promise<void>;
-  defaultValue?: string;
+  action: (
+    prev: GenerateFormState,
+    formData: FormData,
+  ) => Promise<GenerateFormState>;
+  defaultDestination?: string;
 }) {
+  const [serverState, formAction] = useActionState(action, {});
+  const [clientErrors, setClientErrors] = useState<TripInputErrors | null>(
+    null,
+  );
+
+  // Client errors show when the client check fails; otherwise fall back to
+  // whatever the server's own check returned.
+  const errors = clientErrors ?? serverState.fieldErrors ?? {};
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    const data = new FormData(e.currentTarget);
+    const result = validateTripInput({
+      days: data.get("days"),
+      destination: data.get("destination"),
+    });
+    if (!result.ok) {
+      // Preventing default also stops React from running the form action.
+      e.preventDefault();
+      setClientErrors(result.errors);
+      return;
+    }
+    setClientErrors(null);
+  }
+
   return (
-    <form action={action} className="flex gap-2 max-w-md mx-auto">
-      <Input
-        name="destination"
-        placeholder="e.g. Kyoto, Japan"
-        defaultValue={defaultValue}
-        required
-        className="h-11 bg-card/60 backdrop-blur-sm border-border/60
-                   focus-visible:ring-primary/40"
-      />
-      <SubmitButton />
+    <form
+      action={formAction}
+      onSubmit={handleSubmit}
+      noValidate
+      className="max-w-lg mx-auto text-left"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="grid gap-1.5 sm:w-36 sm:shrink-0">
+          <Label htmlFor="trip-days">How many days?</Label>
+          <Input
+            id="trip-days"
+            name="days"
+            type="number"
+            inputMode="numeric"
+            min={MIN_DAYS}
+            max={MAX_DAYS}
+            step={1}
+            placeholder="e.g. 4"
+            required
+            aria-invalid={errors.days ? true : undefined}
+            aria-describedby={errors.days ? "trip-days-error" : undefined}
+            className={inputClass}
+          />
+        </div>
+        <div className="grid gap-1.5 sm:flex-1">
+          <Label htmlFor="trip-destination">Where are you going?</Label>
+          <Input
+            id="trip-destination"
+            name="destination"
+            placeholder="e.g. Kyoto, Japan"
+            defaultValue={defaultDestination}
+            required
+            aria-invalid={errors.destination ? true : undefined}
+            aria-describedby={
+              errors.destination ? "trip-destination-error" : undefined
+            }
+            className={inputClass}
+          />
+        </div>
+        <SubmitButton />
+      </div>
+
+      {(errors.days || errors.destination || serverState.error) && (
+        <div className="mt-2 space-y-1 text-sm text-destructive" role="alert">
+          {errors.days && <p id="trip-days-error">Days: {errors.days}</p>}
+          {errors.destination && (
+            <p id="trip-destination-error">
+              Destination: {errors.destination}
+            </p>
+          )}
+          {serverState.error && <p>{serverState.error}</p>}
+        </div>
+      )}
     </form>
   );
 }

@@ -4,13 +4,20 @@ import { auth0 } from "@/lib/auth0";
 import { generateTripContent } from "@/lib/llm";
 import { searchHotelsForDestination } from "@/lib/hotel-sources";
 import { normalizeDestination } from "@/lib/normalize-destination";
+import { validateTripInput, type TripInputErrors } from "@/lib/trip-input";
 import { syncUser } from "@/db/users";
 import { db } from "@/index";
 import { eq, and } from "drizzle-orm";
 import { trips, users } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 
-export async function generateTrip(destination: string) {
+export async function generateTrip(input: {
+  days: unknown;
+  destination: unknown;
+}): Promise<
+  | { trip: typeof trips.$inferSelect; error?: undefined; fieldErrors?: undefined }
+  | { trip?: undefined; error?: string; fieldErrors?: TripInputErrors }
+> {
   const session = await auth0.getSession();
   if (!session) {
     throw new Error("Not authenticated");
@@ -19,15 +26,18 @@ export async function generateTrip(destination: string) {
     throw new Error("No email associated with this account");
   }
 
-  if (!destination || destination.trim().length === 0) {
-    return { error: "Please enter a destination." };
+  // Never trust the client's validation; check again here.
+  const parsed = validateTripInput(input);
+  if (!parsed.ok) {
+    return { fieldErrors: parsed.errors };
   }
+  const { days, destination } = parsed.value;
 
   try {
     const dbUser = await syncUser(session.user.sub, session.user.email);
     const normalizedDestination = await normalizeDestination(destination);
     const [{ summary, data }] = await Promise.all([
-      generateTripContent(normalizedDestination, {
+      generateTripContent(normalizedDestination, days, {
         displayName: dbUser.displayName,
         dateOfBirth: dbUser.dateOfBirth,
         nationality: dbUser.nationality,
@@ -48,6 +58,7 @@ export async function generateTrip(destination: string) {
       .values({
         userId: dbUser.id,
         destination: normalizedDestination,
+        days,
         content: summary,
         data,
       })

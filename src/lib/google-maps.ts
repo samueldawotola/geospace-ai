@@ -7,10 +7,21 @@ type GoogleMapsGlobal = {
 declare global {
   interface Window {
     google?: GoogleMapsGlobal;
+    gm_authFailure?: () => void;
   }
 }
 
 let loadPromise: Promise<GoogleMapsGlobal> | null = null;
+
+// Maps calls window.gm_authFailure when the key is rejected (invalid key,
+// referrer not allowed, API not enabled). The script still loads, so without
+// this the app thinks it's ready while Google draws its own error box.
+const authFailureListeners = new Set<() => void>();
+
+export function onGoogleMapsAuthFailure(listener: () => void): () => void {
+  authFailureListeners.add(listener);
+  return () => authFailureListeners.delete(listener);
+}
 
 export function loadGoogleMaps(): Promise<GoogleMapsGlobal> {
   if (typeof window === "undefined") {
@@ -32,7 +43,10 @@ export function loadGoogleMaps(): Promise<GoogleMapsGlobal> {
       return;
     }
 
-    
+    window.gm_authFailure = () => {
+      authFailureListeners.forEach((listener) => listener());
+    };
+
     const callbackName = "__geospaceInitGoogleMaps";
 
     const timeout = window.setTimeout(() => {
@@ -59,6 +73,9 @@ export function loadGoogleMaps(): Promise<GoogleMapsGlobal> {
     const script = document.createElement("script");
     script.src =
       `https://maps.googleapis.com/maps/api/js?key=${key}` +
+      // Map3DElement ships in the weekly channel; pin it so a project-level
+      // default channel can't silently drop us onto one without maps3d.
+      `&v=weekly` +
       `&libraries=maps3d,places,geocoding,streetView` +
       `&loading=async&callback=${callbackName}`;
     script.async = true;

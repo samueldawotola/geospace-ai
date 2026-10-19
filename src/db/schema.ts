@@ -52,6 +52,8 @@ export const trips = pgTable("trips", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
   destination: text("destination").notNull(),
+  // Trips created before days was its own field were all generated as 5 days.
+  days: integer("days").notNull().default(5),
   content: text("content"),
   data: jsonb("data").$type<TripPlan>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Globe2, Loader2, PersonStanding, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { loadGoogleMaps } from "@/lib/google-maps";
-
+import { loadGoogleMaps, onGoogleMapsAuthFailure } from "@/lib/google-maps";
 
 type Mode = "globe" | "street";
 
@@ -21,7 +20,47 @@ const CITY_VIEW = {
   tilt: 65,
 };
 
-export default function ImmersiveGlobe() {
+function isValidLatLng(lat: unknown, lng: unknown): lat is number {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180
+  );
+}
+
+// Map3DElement silently drops flyCameraTo calls made while it is still
+// starting up, and gmp-steadychange isn't reliable enough to wait on. So ask,
+// check whether the camera has started moving, and ask again if it hasn't.
+async function flyCameraWhenReady(
+  map3d: any,
+  endCamera: { center: { lat: number; lng: number; altitude: number } } & Record<string, unknown>,
+  durationMillis: number,
+) {
+  const near = (a: any, b: { lat: number; lng: number }) =>
+    Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lng - b.lng) < 1e-4;
+
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if (!map3d.isConnected) return;
+    const start = map3d.center;
+    if (start && near(start, endCamera.center)) return;
+
+    map3d.flyCameraTo({ endCamera, durationMillis });
+    await new Promise((resolve) => setTimeout(resolve, 750));
+
+    const now = map3d.center;
+    if (!start || !now || !near(now, start)) return;
+  }
+}
+
+export default function ImmersiveGlobe({
+  initialDestination,
+}: {
+  // A trip's saved destination; the camera flies there once the globe loads.
+  initialDestination?: string;
+}) {
   const globeContainerRef = useRef<HTMLDivElement>(null);
   const streetContainerRef = useRef<HTMLDivElement>(null);
   const map3dRef = useRef<any>(null);
@@ -30,12 +69,22 @@ export default function ImmersiveGlobe() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("globe");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialDestination ?? "");
   const [searching, setSearching] = useState(false);
 
   // ---- Boot the 3D globe -------------------------------------------------
   useEffect(() => {
     let cancelled = false;
+
+    const unsubscribe = onGoogleMapsAuthFailure(() => {
+      if (cancelled) return;
+      setStatus("error");
+      setMessage(
+        "Google Maps rejected the API key. Check that it's valid, the Maps " +
+          "JavaScript and Map Tiles APIs are enabled, and this site is an " +
+          "allowed referrer.",
+      );
+    });
 
     (async () => {
       try {
@@ -70,14 +119,15 @@ export default function ImmersiveGlobe() {
 
     return () => {
       cancelled = true;
+      unsubscribe();
       map3dRef.current = null;
       panoramaRef.current = null;
     };
   }, []);
 
   // ---- Search: geocode, then fly the camera there ------------------------
-  const handleSearch = useCallback(async () => {
-    const term = query.trim();
+  const flyToPlace = useCallback(async (place: string) => {
+    const term = place.trim();
     if (!term || !map3dRef.current) return;
 
     setSearching(true);
@@ -93,30 +143,51 @@ export default function ImmersiveGlobe() {
         return;
       }
 
-      const loc = results[0].geometry.location;
-      const target = { lat: loc.lat(), lng: loc.lng(), altitude: 0 };
+      const loc = results[0].geometry?.location;
+      const lat = loc?.lat();
+      const lng = loc?.lng();
+      if (!isValidLatLng(lat, lng)) {
+        setMessage(`Couldn't find coordinates for "${term}".`);
+        return;
+      }
+      const target = { lat, lng, altitude: 0 };
 
       // Drop out of Street View if we were on the ground.
       setMode("globe");
 
       // flyCameraTo animates the descent instead of teleporting — this is the
       // whole "immersive" moment, so give it time to breathe.
-      map3dRef.current.flyCameraTo({
-        endCamera: {
-          center: target,
-          range: CITY_VIEW.range,
-          tilt: CITY_VIEW.tilt,
-          heading: 0,
-        },
-        durationMillis: 5000,
-      });
+      if (map3dRef.current) {
+        await flyCameraWhenReady(
+          map3dRef.current,
+          {
+            center: target,
+            range: CITY_VIEW.range,
+            tilt: CITY_VIEW.tilt,
+            heading: 0,
+          },
+          5000,
+        );
+      }
     } catch (err) {
       console.error(err);
       setMessage("Search failed. Try again.");
     } finally {
       setSearching(false);
     }
-  }, [query]);
+  }, []);
+
+  const handleSearch = useCallback(() => flyToPlace(query), [flyToPlace, query]);
+
+  // Fly to the trip's destination once, as soon as the globe is ready.
+  const flewToInitial = useRef(false);
+  useEffect(() => {
+    if (status !== "ready" || !initialDestination || flewToInitial.current) {
+      return;
+    }
+    flewToInitial.current = true;
+    flyToPlace(initialDestination);
+  }, [status, initialDestination, flyToPlace]);
 
   // ---- Drop into Street View at whatever the camera is looking at --------
   const enterStreetView = useCallback(async () => {
@@ -131,6 +202,10 @@ export default function ImmersiveGlobe() {
         (await g.maps.importLibrary("streetView")) as any;
 
       const center = map3d.center;
+      if (!isValidLatLng(center?.lat, center?.lng)) {
+        setMessage("Couldn't read the camera position. Try again.");
+        return;
+      }
       const location = { lat: center.lat, lng: center.lng };
 
       // Ask for the nearest outdoor panorama within 500m of the camera target.

@@ -6,7 +6,7 @@ import { getDestinationPhotos } from "@/lib/photos";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GenerateForm } from "@/components/generate-form";
+import { GenerateForm, type GenerateFormState } from "@/components/generate-form";
 import { DeleteTripButton } from "@/components/delete-trip-button";
 import { ProfileNudge } from "@/components/profile-nudge";
 import TimeOfDayBackground from "@/components/time-of-day-background";
@@ -67,14 +67,19 @@ export default async function Dashboard({
     userTrips.map((trip) => getDestinationPhotos(trip.destination, 1)),
   );
 
-  async function createTrip(formData: FormData) {
+  async function createTrip(
+    _prev: GenerateFormState,
+    formData: FormData,
+  ): Promise<GenerateFormState> {
     "use server";
-    const dest = formData.get("destination") as string;
-    if (!dest?.trim()) return;
-    const result = await generateTrip(dest);
+    const result = await generateTrip({
+      days: formData.get("days"),
+      destination: formData.get("destination"),
+    });
     if (result.trip) {
       redirect(`/dashboard/trips/${result.trip.id}`);
     }
+    return { error: result.error, fieldErrors: result.fieldErrors };
   }
 
   const name = firstName(
@@ -90,14 +95,14 @@ export default async function Dashboard({
       <div className="relative mx-auto max-w-xl text-center py-8">
         <h1 className="text-3xl font-semibold tracking-tight">Where to next?</h1>
         <p className="text-muted-foreground mt-2">
-          Welcome back, {name} — tell us a destination and we&apos;ll build an
-          itinerary tuned to your profile.
+          Welcome back, {name} — tell us how long and where, and we&apos;ll
+          build an itinerary tuned to your profile.
         </p>
         <div className="mt-6">
           <GenerateForm
             key={destination ?? ""}
             action={createTrip}
-            defaultValue={destination}
+            defaultDestination={destination}
           />
         </div>
       </div>
@@ -161,6 +166,7 @@ export default async function Dashboard({
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
+                      {trip.days} {trip.days === 1 ? "day" : "days"} ·{" "}
                       {new Date(trip.createdAt).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
