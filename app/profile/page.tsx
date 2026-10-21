@@ -32,14 +32,14 @@ export default async function ProfilePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Your profile</h1>
         <p className="text-muted-foreground mt-1">
-          The more we know, the sharper every itinerary gets.
+          Itineraries use these details for pace, budget and accessibility.
         </p>
       </div>
 
       <Card className="tod-card border ring-0 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-base">Travel preferences</CardTitle>
-          <CardDescription>These details tune what we generate for you.</CardDescription>
+          <CardDescription>All fields are optional.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={updateProfile} className="grid gap-5 sm:grid-cols-2">
@@ -115,10 +115,10 @@ export default async function ProfilePage() {
               <Label htmlFor="has_passport" className="font-normal">I have a valid passport</Label>
             </div>
 
-            {/* Same time-of-day gradient as the dashboard's Generate button. */}
+            {/* Same time-of-day fill as the dashboard's Generate button. */}
             <Button
               type="submit"
-              className="sm:col-span-2 justify-self-start h-10 rounded-xl border border-white/15 px-5 font-semibold text-white bg-[linear-gradient(45deg,var(--tod-btn-from),var(--tod-btn-to))] hover:brightness-110"
+              className="sm:col-span-2 justify-self-start h-11 rounded-xl px-5 font-semibold text-white bg-(--tod-btn-bg) hover:bg-(--tod-btn-bg) hover:opacity-90"
             >
               Save profile
             </Button>

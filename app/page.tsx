@@ -1,12 +1,13 @@
 import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Bookmark, MapPin, Sparkles } from "lucide-react";
+import { Bookmark, CalendarDays, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ItineraryOverview } from "@/components/itinerary-overview";
+import { ExpandableText } from "@/components/expandable-text";
 import { GlobeStill } from "@/components/globe-still";
 import TimeOfDayBackground from "@/components/time-of-day-background";
 import { SAMPLE_ITINERARY } from "@/lib/sample-itinerary";
@@ -17,18 +18,18 @@ const CONTACT_EMAIL = "ssgeospaceai@gmail.com";
 const STEPS = [
   {
     icon: MapPin,
-    heading: "Name a destination",
-    body: "It's just one city, you say the word",
+    heading: "Enter a destination",
+    body: "A city, region or landmark, plus how many days you have.",
   },
   {
-    icon: Sparkles,
-    heading: "Get a grounded plan",
-    body: "The model researches real places and cites its sources, day by day.",
+    icon: CalendarDays,
+    heading: "Get a day-by-day plan",
+    body: "Morning, afternoon and evening plans, a packing list, a budget, and sourced safety notes.",
   },
   {
     icon: Bookmark,
-    heading: "Save it and come back",
-    body: "Every itinerary stays in your account, ready to revisit and refine.",
+    heading: "Find it later",
+    body: "Trips are saved to your account.",
   },
 ];
 
@@ -52,12 +53,12 @@ export default async function LandingPage() {
             See the world before it changes.
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Geospace builds custom, day by day itineraries that lets you know
-            where you&apos;re actually going
+            Day-by-day itineraries built from real places, with sources for
+            safety and travel advice.
           </p>
           <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center md:justify-start">
             <Button asChild size="lg" className="h-11">
-              <a href="/auth/login?screen_hint=signup">Start planning free</a>
+              <a href="/auth/login?screen_hint=signup">Sign up free</a>
             </Button>
             <Button asChild variant="outline" size="lg" className="h-11">
               <a href="/auth/login">Log in</a>
@@ -68,7 +69,7 @@ export default async function LandingPage() {
               href="/globe"
               className="text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
             >
-              Explore the globe
+              Open the 3D globe
             </Link>
           </p>
         </div>
@@ -108,7 +109,7 @@ export default async function LandingPage() {
             {sample.destination}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            A real itinerary Geospace generated.
+            An unedited itinerary from Geospace.
           </p>
         </div>
 
@@ -123,9 +124,11 @@ export default async function LandingPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                {sample.data.destinationOverview}
-              </p>
+              <ExpandableText lines={4}>
+                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                  {sample.data.destinationOverview}
+                </p>
+              </ExpandableText>
             </CardContent>
           </Card>
 
@@ -135,7 +138,7 @@ export default async function LandingPage() {
         <div className="mt-8 text-center">
           <Button asChild size="lg" className="h-11">
             <a href="/auth/login?screen_hint=signup">
-              Plan one for your destination
+              Plan your own trip
             </a>
           </Button>
         </div>

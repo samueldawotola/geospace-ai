@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import Nav from "@/components/nav";
 import { auth0 } from "@/lib/auth0";
@@ -43,13 +44,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+// Reading the session touches cookies, which is runtime data. Kept in its own
+// Suspense boundary so it never blocks a page's loading.tsx from showing
+// (see node_modules/next/dist/docs: layout.js "Interaction with loading.js").
+async function SessionNav() {
+  const session = await auth0.getSession();
+  return <Nav signedIn={Boolean(session)} />;
+}
+
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth0.getSession();
-
   return (
     // suppressHydrationWarning: the inline script adds data-time-slot/tone before React hydrates.
     <html lang="en" suppressHydrationWarning>
@@ -59,7 +66,9 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-[#7FB3A9] text-black">
         <TimeSlotSync />
-        <Nav signedIn={Boolean(session)} />
+        <Suspense fallback={<Nav signedIn={null} />}>
+          <SessionNav />
+        </Suspense>
         <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
         <TimeOfDayCursor />
       </body>

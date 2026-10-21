@@ -72,14 +72,25 @@ export default async function Dashboard({
     formData: FormData,
   ): Promise<GenerateFormState> {
     "use server";
+    const days = formData.get("days");
+    const destination = formData.get("destination");
     const result = await generateTrip({
-      days: formData.get("days"),
-      destination: formData.get("destination"),
+      days,
+      destination,
+      placeId: formData.get("placeId"),
     });
     if (result.trip) {
       redirect(`/dashboard/trips/${result.trip.id}`);
     }
-    return { error: result.error, fieldErrors: result.fieldErrors };
+    return {
+      error: result.error,
+      fieldErrors: result.fieldErrors,
+      candidates: result.candidates?.map(({ placeId, label }) => ({ placeId, label })),
+      values: {
+        days: typeof days === "string" ? days : "",
+        destination: typeof destination === "string" ? destination : "",
+      },
+    };
   }
 
   const name = firstName(
@@ -95,8 +106,7 @@ export default async function Dashboard({
       <div className="relative mx-auto max-w-xl text-center py-8">
         <h1 className="text-3xl font-semibold tracking-tight">Where to next?</h1>
         <p className="text-muted-foreground mt-2">
-          Welcome back, {name} — tell us how long and where, and we&apos;ll
-          build an itinerary tuned to your profile.
+          Welcome back, {name}. Enter a trip length and destination.
         </p>
         <div className="mt-6">
           <GenerateForm

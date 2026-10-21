@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPinIcon, SparklesIcon } from "lucide-react";
+import { MapPinIcon, PlusIcon } from "lucide-react";
 
 import {
   Command,
@@ -88,7 +88,7 @@ export function TripSearch({ trips }: { trips: Trip[] }) {
               value={`${PLAN_PREFIX}${typed}`}
               onSelect={() => router.push(`/dashboard?destination=${encodeURIComponent(typed)}`)}
             >
-              <SparklesIcon className="opacity-60" />
+              <PlusIcon className="opacity-60" />
               <span className="truncate">Plan a trip to “{typed}”</span>
             </CommandItem>
           </CommandGroup>

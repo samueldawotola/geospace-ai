@@ -7,7 +7,7 @@
 // nav  = the top bar's base color and its three moving-line colors, taken
 //        from the same slot's artwork.
 // card = glass tint for the dashboard's trip cards (.tod-card in globals.css).
-// button = the Generate button's gradient and sparkle (src/components/generate-form.tsx).
+// button = the Generate and Save buttons' fill (generate-form.tsx, profile page).
 // cursor = the dot cursor's head and trail, picked to stand out on that slot's art
 //          (src/components/time-of-day-cursor.tsx).
 export const TIME_SLOTS = [
@@ -16,7 +16,7 @@ export const TIME_SLOTS = [
     src: "/backgrounds/early-morning.svg", color: "#FFD24D", tone: "light",
     nav: { base: "#2A2752", lines: ["#FFD24D", "#E6DBA3", "#8F89E0"] },
     card: { bg: "rgb(255 246 222 / 0.62)", hover: "rgb(255 246 222 / 0.8)", border: "rgb(255 210 77 / 0.45)", fg: "#241F3D", muted: "#5B5677", accent: "#6661B8", onAccent: "#FFFFFF" },
-    button: { from: "#5B56A8", to: "#C98A2E", sparkle: "#FFD24D" },
+    button: { bg: "#5B56A8" },
     cursor: { head: "#6661B8", trail: "#FFD24D" },
   },
   {
@@ -24,7 +24,7 @@ export const TIME_SLOTS = [
     src: "/backgrounds/morning.svg", color: "#FCF6EF", tone: "light",
     nav: { base: "#1F4446", lines: ["#F5CBA7", "#D3E8E6", "#A9D0CE"] },
     card: { bg: "rgb(252 246 239 / 0.65)", hover: "rgb(252 246 239 / 0.82)", border: "rgb(122 173 171 / 0.4)", fg: "#1F2E2F", muted: "#566868", accent: "#3C6F72", onAccent: "#FFFFFF" },
-    button: { from: "#3C6F72", to: "#C9876A", sparkle: "#F7E4D3" },
+    button: { bg: "#3C6F72" },
     cursor: { head: "#3C6F72", trail: "#F5CBA7" },
   },
   {
@@ -32,7 +32,7 @@ export const TIME_SLOTS = [
     src: "/backgrounds/afternoon.svg", color: "#EEF6F3", tone: "light",
     nav: { base: "#1E4F51", lines: ["#A8D2E3", "#FFFDF4", "#97C9C5"] },
     card: { bg: "rgb(238 246 243 / 0.6)", hover: "rgb(238 246 243 / 0.8)", border: "rgb(100 166 163 / 0.4)", fg: "#13292B", muted: "#4C6465", accent: "#2B6466", onAccent: "#FFFFFF" },
-    button: { from: "#1F6F8B", to: "#3F8385", sparkle: "#CFEAF2" },
+    button: { bg: "#1F6F8B" },
     cursor: { head: "#2B6466", trail: "#97C9C5" },
   },
   {
@@ -40,7 +40,7 @@ export const TIME_SLOTS = [
     src: "/backgrounds/evening.svg", color: "#F1A877", tone: "dark",
     nav: { base: "#24384F", lines: ["#F1A877", "#F7C36A", "#A08FA3"] },
     card: { bg: "rgb(36 56 79 / 0.55)", hover: "rgb(36 56 79 / 0.72)", border: "rgb(241 168 119 / 0.35)", fg: "#F6EEE6", muted: "#D9C9C2", accent: "#F7C36A", onAccent: "#2A2117" },
-    button: { from: "#33416E", to: "#D9864F", sparkle: "#F7C36A" },
+    button: { bg: "#33416E" },
     cursor: { head: "#F7C36A", trail: "#F1A877" },
   },
   {
@@ -48,7 +48,7 @@ export const TIME_SLOTS = [
     src: "/backgrounds/night.svg", color: "#1B3350", tone: "dark",
     nav: { base: "#07121F", lines: ["#CFDDEE", "#F3EBD8", "#7FA3B8"] },
     card: { bg: "rgb(12 34 49 / 0.55)", hover: "rgb(12 34 49 / 0.72)", border: "rgb(207 221 238 / 0.22)", fg: "#E6EEF6", muted: "#A9BCCD", accent: "#CFDDEE", onAccent: "#0C2231" },
-    button: { from: "#0C2231", to: "#2B4762", sparkle: "#CFDDEE" },
+    button: { bg: "#0C2231" },
     cursor: { head: "#CFDDEE", trail: "#7FA3B8" },
   },
 ] as const;
@@ -77,7 +77,7 @@ export const TIME_SLOT_CSS = TIME_SLOTS.map(
   ({ id, nav, card, button }) =>
     `:root[data-time-slot="${id}"]{--tod-nav-base:${nav.base};--tod-line-1:${nav.lines[0]};--tod-line-2:${nav.lines[1]};--tod-line-3:${nav.lines[2]};` +
     `--tod-card-bg:${card.bg};--tod-card-hover:${card.hover};--tod-card-border:${card.border};--tod-card-fg:${card.fg};--tod-card-muted:${card.muted};--tod-card-accent:${card.accent};--tod-card-on-accent:${card.onAccent};` +
-    `--tod-btn-from:${button.from};--tod-btn-to:${button.to};--tod-btn-sparkle:${button.sparkle}}` +
+    `--tod-btn-bg:${button.bg}}` +
     `:root[data-time-slot="${id}"] .tod-layer[data-slot="${id}"]{opacity:1}`,
 ).join("");
 

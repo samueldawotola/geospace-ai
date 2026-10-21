@@ -3,6 +3,7 @@ import type { TripPlan } from "@/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DayByDay } from "@/components/day-by-day";
 import { Marked, splitSentences } from "@/components/marked-text";
+import { ExpandableText } from "@/components/expandable-text";
 
 /**
  * The body of a trip's "Overview" tab. Extracted from
@@ -72,7 +73,9 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
                     </span>
                   </div>
                   {b.notes && (
-                    <p className="text-muted-foreground pt-2">{b.notes}</p>
+                    <ExpandableText lines={2} className="pt-2">
+                      <p className="text-muted-foreground">{b.notes}</p>
+                    </ExpandableText>
                   )}
                 </>
               );
@@ -119,7 +122,7 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
                     href={risk.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1.5 inline-block text-xs text-primary underline"
+                    className="mt-1.5 inline-block max-w-full truncate align-bottom text-xs text-primary underline"
                   >
                     {risk.sourceName}
                   </a>
@@ -185,14 +188,18 @@ export function ItineraryOverview({ data }: { data: TripPlan }) {
               <p className="font-medium">
                 {data.grounded.housingPlan.recommendation}
               </p>
-              <p className="text-muted-foreground mt-1">
-                {data.grounded.housingPlan.reasoning}
-              </p>
+              <ExpandableText lines={3} className="mt-1">
+                <p className="text-muted-foreground">
+                  {data.grounded.housingPlan.reasoning}
+                </p>
+              </ExpandableText>
             </div>
             {data.grounded.housingPlan.alternatives.map((a) => (
               <div key={a.option}>
                 <p className="font-medium">{a.option}</p>
-                <p className="text-muted-foreground">{a.note}</p>
+                <ExpandableText lines={2}>
+                  <p className="text-muted-foreground">{a.note}</p>
+                </ExpandableText>
               </div>
             ))}
             <p className="text-muted-foreground pt-2 border-t border-border/50">
@@ -211,7 +218,7 @@ type Source = TripPlan["grounded"]["onlineContent"]["officialSources"][number];
 // rather than an empty link that reloads the page.
 function SourceItem({ source }: { source: Source }) {
   return (
-    <li>
+    <li className="break-words">
       {source.url ? (
         <a
           href={source.url}

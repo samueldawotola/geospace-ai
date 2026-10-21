@@ -164,13 +164,11 @@ body:has(.tod-backdrop) {
 @property --tod-line-1 { syntax: "<color>"; inherits: true; initial-value: #CFDDEE; }
 @property --tod-line-2 { syntax: "<color>"; inherits: true; initial-value: #F3EBD8; }
 @property --tod-line-3 { syntax: "<color>"; inherits: true; initial-value: #7FA3B8; }
-@property --tod-btn-from { syntax: "<color>"; inherits: true; initial-value: #1F6F8B; }
-@property --tod-btn-to { syntax: "<color>"; inherits: true; initial-value: #3F8385; }
-@property --tod-btn-sparkle { syntax: "<color>"; inherits: true; initial-value: #CFEAF2; }
+@property --tod-btn-bg { syntax: "<color>"; inherits: true; initial-value: #1F6F8B; }
 :root {
   transition: --tod-nav-base 1.2s ease, --tod-line-1 1.2s ease,
     --tod-line-2 1.2s ease, --tod-line-3 1.2s ease,
-    --tod-btn-from 1.2s ease, --tod-btn-to 1.2s ease, --tod-btn-sparkle 1.2s ease;
+    --tod-btn-bg 1.2s ease;
 }
 .nav-meteors {
   position: absolute;
@@ -369,12 +367,11 @@ body:has(.tod-backdrop) {
   --input: color-mix(in oklab, var(--tod-card-fg, #000) 22%, transparent);
   --ring: var(--tod-card-accent, oklch(0.708 0 0));
   --primary-foreground: var(--tod-card-on-accent, oklch(0.985 0 0));
-  transition: background-color 1.2s ease, border-color 1.2s ease, color 1.2s ease, box-shadow 0.2s ease;
+  transition: background-color 1.2s ease, border-color 1.2s ease, color 1.2s ease;
 }
 .tod-card-interactive:hover {
   background-color: var(--tod-card-hover, rgb(255 255 255 / 0.8));
   border-color: color-mix(in oklab, var(--tod-card-accent, #000) 45%, transparent);
-  box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--tod-card-accent, #000) 40%, transparent);
 }
 /* Native widgets (date picker icon, scrollbars) match dark glass at Evening/Night. */
 :root[data-time-tone="dark"] .tod-card {

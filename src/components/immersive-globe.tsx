@@ -20,6 +20,8 @@ const CITY_VIEW = {
   tilt: 65,
 };
 
+type Choice = { label: string; lat: number; lng: number };
+
 function isValidLatLng(lat: unknown, lng: unknown): lat is number {
   return (
     typeof lat === "number" &&
@@ -71,6 +73,7 @@ export default function ImmersiveGlobe({
   const [mode, setMode] = useState<Mode>("globe");
   const [query, setQuery] = useState(initialDestination ?? "");
   const [searching, setSearching] = useState(false);
+  const [choices, setChoices] = useState<Choice[] | null>(null);
 
   // ---- Boot the 3D globe -------------------------------------------------
   useEffect(() => {
@@ -126,56 +129,77 @@ export default function ImmersiveGlobe({
   }, []);
 
   // ---- Search: geocode, then fly the camera there ------------------------
+  const flyToCoords = useCallback(async (lat: number, lng: number) => {
+    setChoices(null);
+    // Drop out of Street View if we were on the ground.
+    setMode("globe");
+
+    // flyCameraTo animates the descent instead of teleporting — this is the
+    // whole "immersive" moment, so give it time to breathe.
+    if (map3dRef.current) {
+      await flyCameraWhenReady(
+        map3dRef.current,
+        {
+          center: { lat, lng, altitude: 0 },
+          range: CITY_VIEW.range,
+          tilt: CITY_VIEW.tilt,
+          heading: 0,
+        },
+        5000,
+      );
+    }
+  }, []);
+
+  // Never guess: no exact match shows "no results", several exact matches
+  // show a list to pick from, and only a single match flies straight there.
   const flyToPlace = useCallback(async (place: string) => {
     const term = place.trim();
     if (!term || !map3dRef.current) return;
 
     setSearching(true);
     setMessage(null);
+    setChoices(null);
 
     try {
       const g = await loadGoogleMaps();
       const { Geocoder } = (await g.maps.importLibrary("geocoding")) as any;
-      const { results } = await new Geocoder().geocode({ address: term });
+      let results: any[] = [];
+      try {
+        ({ results } = await new Geocoder().geocode({ address: term }));
+      } catch (err) {
+        // The geocoder rejects with ZERO_RESULTS instead of returning [].
+        if ((err as { code?: string })?.code !== "ZERO_RESULTS") throw err;
+      }
 
-      if (!results?.length) {
-        setMessage(`Couldn't find "${term}".`);
+      // partial_match means Google matched only part of the query, which is
+      // exactly the loose guess this search should not act on.
+      const seen = new Set<string>();
+      const exact: Choice[] = [];
+      for (const r of results ?? []) {
+        if (r.partial_match) continue;
+        const lat = r.geometry?.location?.lat();
+        const lng = r.geometry?.location?.lng();
+        if (!isValidLatLng(lat, lng) || seen.has(r.formatted_address)) continue;
+        seen.add(r.formatted_address);
+        exact.push({ label: r.formatted_address, lat, lng: lng as number });
+      }
+
+      if (exact.length === 0) {
+        setMessage(`No results for "${term}". Check the spelling or add a country.`);
         return;
       }
-
-      const loc = results[0].geometry?.location;
-      const lat = loc?.lat();
-      const lng = loc?.lng();
-      if (!isValidLatLng(lat, lng)) {
-        setMessage(`Couldn't find coordinates for "${term}".`);
+      if (exact.length > 1) {
+        setChoices(exact.slice(0, 5));
         return;
       }
-      const target = { lat, lng, altitude: 0 };
-
-      // Drop out of Street View if we were on the ground.
-      setMode("globe");
-
-      // flyCameraTo animates the descent instead of teleporting — this is the
-      // whole "immersive" moment, so give it time to breathe.
-      if (map3dRef.current) {
-        await flyCameraWhenReady(
-          map3dRef.current,
-          {
-            center: target,
-            range: CITY_VIEW.range,
-            tilt: CITY_VIEW.tilt,
-            heading: 0,
-          },
-          5000,
-        );
-      }
+      await flyToCoords(exact[0].lat, exact[0].lng);
     } catch (err) {
       console.error(err);
       setMessage("Search failed. Try again.");
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [flyToCoords]);
 
   const handleSearch = useCallback(() => flyToPlace(query), [flyToPlace, query]);
 
@@ -274,14 +298,14 @@ export default function ImmersiveGlobe({
 
       {/* Search bar */}
       <div className="absolute left-1/2 top-4 z-10 w-full max-w-md -translate-x-1/2 px-4">
-        <div className="flex gap-2 rounded-lg bg-white/95 p-2 shadow-lg backdrop-blur">
+        <div className="flex gap-2 rounded-lg bg-white/95 p-2 shadow-sm backdrop-blur">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch();
             }}
-            placeholder="Fly to a place — Kyoto, Machu Picchu, Reykjavík…"
+            placeholder="Search a place, e.g. Kyoto"
             className="border-0 shadow-none focus-visible:ring-0"
             disabled={status !== "ready"}
           />
@@ -299,9 +323,28 @@ export default function ImmersiveGlobe({
         </div>
 
         {message && (
-          <p className="mt-2 rounded-md bg-white/95 px-3 py-2 text-sm text-black shadow">
+          <p className="mt-2 rounded-md bg-white/95 px-3 py-2 text-sm text-black shadow-sm">
             {message}
           </p>
+        )}
+
+        {choices && (
+          <div className="mt-2 rounded-md bg-white/95 p-2 text-sm text-black shadow-sm">
+            <p className="px-1 pb-1 font-medium">Which one did you mean?</p>
+            <ul>
+              {choices.map((c) => (
+                <li key={c.label}>
+                  <button
+                    type="button"
+                    onClick={() => flyToCoords(c.lat, c.lng)}
+                    className="w-full rounded px-1 py-1.5 text-left hover:bg-black/5"
+                  >
+                    {c.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 
@@ -334,7 +377,7 @@ export default function ImmersiveGlobe({
           {status === "loading" ? (
             <>
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-sm opacity-80">Loading the planet…</p>
+              <p className="text-sm opacity-80">Loading globe…</p>
             </>
           ) : (
             <>

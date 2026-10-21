@@ -14,6 +14,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ExpandableText } from "@/components/expandable-text";
 
 type Day = TripPlan["itinerary"][number];
 
@@ -87,22 +88,28 @@ export function DayByDay({ days }: { days: Day[] }) {
       </CardHeader>
       {day && (
         <CardContent>
-          <div className="border-l-2 border-primary/30 pl-4" aria-live="polite">
+          <div key={day.day} className="border-l-2 border-primary/30 pl-4" aria-live="polite">
             <p className="font-medium text-sm">
               Day {day.day} — {day.title}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium text-foreground/80">Morning: </span>
-              {day.morning}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium text-foreground/80">Afternoon: </span>
-              {day.afternoon}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium text-foreground/80">Evening: </span>
-              {day.evening}
-            </p>
+            <ExpandableText lines={3} className="mt-1">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground/80">Morning: </span>
+                {day.morning}
+              </p>
+            </ExpandableText>
+            <ExpandableText lines={3} className="mt-1">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground/80">Afternoon: </span>
+                {day.afternoon}
+              </p>
+            </ExpandableText>
+            <ExpandableText lines={3} className="mt-1">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground/80">Evening: </span>
+                {day.evening}
+              </p>
+            </ExpandableText>
           </div>
         </CardContent>
       )}
