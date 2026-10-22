@@ -3,14 +3,31 @@
 import { auth0 } from "@/lib/auth0";
 import { generateTripContent } from "@/lib/llm";
 import { searchHotelsForDestination } from "@/lib/hotel-sources";
-import { normalizeDestination } from "@/lib/normalize-destination";
+import {
+  getGroundingPlaces,
+  getPlaceById,
+  resolveDestination,
+  type PlaceCandidate,
+  type ResolvedPlace,
+} from "@/lib/place-resolver";
+import { isTravelRequest, OFF_TOPIC_MESSAGE } from "@/lib/trip-guard";
+import { validateTripInput, type TripInputErrors } from "@/lib/trip-input";
 import { syncUser } from "@/db/users";
 import { db } from "@/index";
 import { eq, and } from "drizzle-orm";
 import { trips, users } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 
-export async function generateTrip(destination: string) {
+export type GenerateTripResult =
+  | { trip: typeof trips.$inferSelect; error?: undefined; fieldErrors?: undefined; candidates?: undefined }
+  | { trip?: undefined; error?: string; fieldErrors?: TripInputErrors; candidates?: PlaceCandidate[] };
+
+export async function generateTrip(input: {
+  days: unknown;
+  destination: unknown;
+  /** Set when the user picked one of the candidates from a previous attempt. */
+  placeId?: unknown;
+}): Promise<GenerateTripResult> {
   const session = await auth0.getSession();
   if (!session) {
     throw new Error("Not authenticated");
@@ -19,15 +36,48 @@ export async function generateTrip(destination: string) {
     throw new Error("No email associated with this account");
   }
 
-  if (!destination || destination.trim().length === 0) {
-    return { error: "Please enter a destination." };
+  // Never trust the client's validation; check again here.
+  const parsed = validateTripInput(input);
+  if (!parsed.ok) {
+    return { fieldErrors: parsed.errors };
   }
+  const { days, destination } = parsed.value;
+  const placeId = typeof input.placeId === "string" ? input.placeId : "";
 
   try {
+    // 1. Scope: refuse anything that isn't a destination before spending a
+    //    place lookup or a generation on it.
+    if (!placeId && !(await isTravelRequest(destination))) {
+      return { fieldErrors: { destination: OFF_TOPIC_MESSAGE } };
+    }
+
+    // 2. Resolve to exactly one real place, or stop. No guessing.
+    let place: ResolvedPlace | null;
+    if (placeId) {
+      place = await getPlaceById(placeId);
+    } else {
+      const resolution = await resolveDestination(destination);
+      if (resolution.status === "ambiguous") {
+        return { candidates: resolution.candidates };
+      }
+      place = resolution.status === "resolved" ? resolution.place : null;
+    }
+    if (!place) {
+      return {
+        fieldErrors: {
+          destination: `No place found for "${destination}". Check the spelling or add a country.`,
+        },
+      };
+    }
+
+    // 3. Generate from retrieved place data only.
     const dbUser = await syncUser(session.user.sub, session.user.email);
-    const normalizedDestination = await normalizeDestination(destination);
+    const groundingPlaces = await getGroundingPlaces(place).catch((err) => {
+      console.error("Grounding place search failed:", err);
+      return [];
+    });
     const [{ summary, data }] = await Promise.all([
-      generateTripContent(normalizedDestination, {
+      generateTripContent(place, days, groundingPlaces, {
         displayName: dbUser.displayName,
         dateOfBirth: dbUser.dateOfBirth,
         nationality: dbUser.nationality,
@@ -38,7 +88,7 @@ export async function generateTrip(destination: string) {
         familyPets: dbUser.familyPets,
         hasPassport: dbUser.hasPassport,
       }),
-      searchHotelsForDestination(normalizedDestination).catch((err) => {
+      searchHotelsForDestination(place).catch((err) => {
         console.error("Hotel search failed:", err);
       }),
     ]);
@@ -47,7 +97,8 @@ export async function generateTrip(destination: string) {
       .insert(trips)
       .values({
         userId: dbUser.id,
-        destination: normalizedDestination,
+        destination: place.label,
+        days,
         content: summary,
         data,
       })

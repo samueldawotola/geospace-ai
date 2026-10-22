@@ -22,9 +22,9 @@ export function ProfileNudge({ userId }: { userId: string }) {
   if (dismissed) return null;
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+    <div className="tod-card flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm backdrop-blur-sm">
       <p>
-        Your traveler profile is incomplete — add a few details for sharper itineraries.{" "}
+        Your profile is incomplete. Itineraries use it for pace, budget and accessibility.{" "}
         <Link href="/profile" className="font-medium text-primary underline">
           Update profile
         </Link>

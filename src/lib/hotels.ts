@@ -32,7 +32,11 @@ export async function getHotelsForDestination(
     .order("rating", { ascending: false, nullsFirst: false });
 
   if (error) {
-    console.error("Failed to load hotels:", error);
+    // PostgrestError's fields don't survive Next's console forwarding (it
+    // shows up as "{}"), so log them explicitly.
+    console.error(
+      `Failed to load hotels: ${error.message}${error.code ? ` (${error.code})` : ""}${error.hint ? ` — ${error.hint}` : ""}`,
+    );
     return [];
   }
 

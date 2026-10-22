@@ -2,6 +2,7 @@ import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { syncUser } from "@/db/users";
 import { updateProfile } from "@/lib/actions";
+import TimeOfDayBackground from "@/components/time-of-day-background";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,42 +28,40 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <TimeOfDayBackground />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Your profile</h1>
         <p className="text-muted-foreground mt-1">
-          The more we know, the sharper every itinerary gets.
+          Itineraries use these details for pace, budget and accessibility.
         </p>
       </div>
 
-      <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+      <Card className="tod-card border ring-0 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-base">Travel preferences</CardTitle>
-          <CardDescription>These details tune what we generate for you.</CardDescription>
+          <CardDescription>All fields are optional.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={updateProfile} className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="display_name">Name</Label>
-              <Input id="display_name" name="display_name" defaultValue={dbUser.displayName ?? ""}
-                className="bg-background/40 focus-visible:ring-primary/40" />
+              <Input id="display_name" name="display_name" defaultValue={dbUser.displayName ?? ""} />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="date_of_birth">Date of birth</Label>
-              <Input id="date_of_birth" type="date" name="date_of_birth" defaultValue={dbUser.dateOfBirth ?? ""}
-                className="bg-background/40 focus-visible:ring-primary/40" />
+              <Input id="date_of_birth" type="date" name="date_of_birth" defaultValue={dbUser.dateOfBirth ?? ""} />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="nationality">Nationality</Label>
-              <Input id="nationality" name="nationality" defaultValue={dbUser.nationality ?? ""}
-                className="bg-background/40 focus-visible:ring-primary/40" />
+              <Input id="nationality" name="nationality" defaultValue={dbUser.nationality ?? ""} />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="travel_style">Travel style</Label>
               <Select name="travel_style" defaultValue={dbUser.travelStyle ?? undefined}>
-                <SelectTrigger id="travel_style" className="bg-background/40">
+                <SelectTrigger id="travel_style">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
@@ -76,7 +75,7 @@ export default async function ProfilePage() {
             <div className="grid gap-2">
               <Label htmlFor="fitness">Fitness</Label>
               <Select name="fitness" defaultValue={dbUser.fitness ?? undefined}>
-                <SelectTrigger id="fitness" className="bg-background/40">
+                <SelectTrigger id="fitness">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
@@ -90,7 +89,7 @@ export default async function ProfilePage() {
             <div className="grid gap-2">
               <Label htmlFor="budget">Budget</Label>
               <Select name="budget" defaultValue={dbUser.budget ?? undefined}>
-                <SelectTrigger id="budget" className="bg-background/40">
+                <SelectTrigger id="budget">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
@@ -103,14 +102,12 @@ export default async function ProfilePage() {
 
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="accessibility">Accessibility needs</Label>
-              <Textarea id="accessibility" name="accessibility" rows={2} defaultValue={dbUser.accessibility ?? ""}
-                className="bg-background/40 focus-visible:ring-primary/40" />
+              <Textarea id="accessibility" name="accessibility" rows={2} defaultValue={dbUser.accessibility ?? ""} />
             </div>
 
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="family_pets">Family / pets</Label>
-              <Textarea id="family_pets" name="family_pets" rows={2} defaultValue={dbUser.familyPets ?? ""}
-                className="bg-background/40 focus-visible:ring-primary/40" />
+              <Textarea id="family_pets" name="family_pets" rows={2} defaultValue={dbUser.familyPets ?? ""} />
             </div>
 
             <div className="flex items-center gap-2 sm:col-span-2">
@@ -118,7 +115,13 @@ export default async function ProfilePage() {
               <Label htmlFor="has_passport" className="font-normal">I have a valid passport</Label>
             </div>
 
-            <Button type="submit" className="sm:col-span-2 justify-self-start">Save profile</Button>
+            {/* Same time-of-day fill as the dashboard's Generate button. */}
+            <Button
+              type="submit"
+              className="sm:col-span-2 justify-self-start h-11 rounded-xl px-5 font-semibold text-white bg-(--tod-btn-bg) hover:bg-(--tod-btn-bg) hover:opacity-90"
+            >
+              Save profile
+            </Button>
           </form>
         </CardContent>
       </Card>

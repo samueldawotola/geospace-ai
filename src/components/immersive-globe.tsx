@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Globe2, Loader2, PersonStanding, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { loadGoogleMaps } from "@/lib/google-maps";
-
+import { loadGoogleMaps, onGoogleMapsAuthFailure } from "@/lib/google-maps";
 
 type Mode = "globe" | "street";
 
@@ -21,7 +20,49 @@ const CITY_VIEW = {
   tilt: 65,
 };
 
-export default function ImmersiveGlobe() {
+type Choice = { label: string; lat: number; lng: number };
+
+function isValidLatLng(lat: unknown, lng: unknown): lat is number {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180
+  );
+}
+
+// Map3DElement silently drops flyCameraTo calls made while it is still
+// starting up, and gmp-steadychange isn't reliable enough to wait on. So ask,
+// check whether the camera has started moving, and ask again if it hasn't.
+async function flyCameraWhenReady(
+  map3d: any,
+  endCamera: { center: { lat: number; lng: number; altitude: number } } & Record<string, unknown>,
+  durationMillis: number,
+) {
+  const near = (a: any, b: { lat: number; lng: number }) =>
+    Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lng - b.lng) < 1e-4;
+
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if (!map3d.isConnected) return;
+    const start = map3d.center;
+    if (start && near(start, endCamera.center)) return;
+
+    map3d.flyCameraTo({ endCamera, durationMillis });
+    await new Promise((resolve) => setTimeout(resolve, 750));
+
+    const now = map3d.center;
+    if (!start || !now || !near(now, start)) return;
+  }
+}
+
+export default function ImmersiveGlobe({
+  initialDestination,
+}: {
+  // A trip's saved destination; the camera flies there once the globe loads.
+  initialDestination?: string;
+}) {
   const globeContainerRef = useRef<HTMLDivElement>(null);
   const streetContainerRef = useRef<HTMLDivElement>(null);
   const map3dRef = useRef<any>(null);
@@ -30,12 +71,23 @@ export default function ImmersiveGlobe() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("globe");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialDestination ?? "");
   const [searching, setSearching] = useState(false);
+  const [choices, setChoices] = useState<Choice[] | null>(null);
 
   // ---- Boot the 3D globe -------------------------------------------------
   useEffect(() => {
     let cancelled = false;
+
+    const unsubscribe = onGoogleMapsAuthFailure(() => {
+      if (cancelled) return;
+      setStatus("error");
+      setMessage(
+        "Google Maps rejected the API key. Check that it's valid, the Maps " +
+          "JavaScript and Map Tiles APIs are enabled, and this site is an " +
+          "allowed referrer.",
+      );
+    });
 
     (async () => {
       try {
@@ -70,53 +122,96 @@ export default function ImmersiveGlobe() {
 
     return () => {
       cancelled = true;
+      unsubscribe();
       map3dRef.current = null;
       panoramaRef.current = null;
     };
   }, []);
 
   // ---- Search: geocode, then fly the camera there ------------------------
-  const handleSearch = useCallback(async () => {
-    const term = query.trim();
-    if (!term || !map3dRef.current) return;
+  const flyToCoords = useCallback(async (lat: number, lng: number) => {
+    setChoices(null);
+    // Drop out of Street View if we were on the ground.
+    setMode("globe");
 
-    setSearching(true);
-    setMessage(null);
-
-    try {
-      const g = await loadGoogleMaps();
-      const { Geocoder } = (await g.maps.importLibrary("geocoding")) as any;
-      const { results } = await new Geocoder().geocode({ address: term });
-
-      if (!results?.length) {
-        setMessage(`Couldn't find "${term}".`);
-        return;
-      }
-
-      const loc = results[0].geometry.location;
-      const target = { lat: loc.lat(), lng: loc.lng(), altitude: 0 };
-
-      // Drop out of Street View if we were on the ground.
-      setMode("globe");
-
-      // flyCameraTo animates the descent instead of teleporting — this is the
-      // whole "immersive" moment, so give it time to breathe.
-      map3dRef.current.flyCameraTo({
-        endCamera: {
-          center: target,
+    // flyCameraTo animates the descent instead of teleporting — this is the
+    // whole "immersive" moment, so give it time to breathe.
+    if (map3dRef.current) {
+      await flyCameraWhenReady(
+        map3dRef.current,
+        {
+          center: { lat, lng, altitude: 0 },
           range: CITY_VIEW.range,
           tilt: CITY_VIEW.tilt,
           heading: 0,
         },
-        durationMillis: 5000,
-      });
+        5000,
+      );
+    }
+  }, []);
+
+  // Never guess: no exact match shows "no results", several exact matches
+  // show a list to pick from, and only a single match flies straight there.
+  const flyToPlace = useCallback(async (place: string) => {
+    const term = place.trim();
+    if (!term || !map3dRef.current) return;
+
+    setSearching(true);
+    setMessage(null);
+    setChoices(null);
+
+    try {
+      const g = await loadGoogleMaps();
+      const { Geocoder } = (await g.maps.importLibrary("geocoding")) as any;
+      let results: any[] = [];
+      try {
+        ({ results } = await new Geocoder().geocode({ address: term }));
+      } catch (err) {
+        // The geocoder rejects with ZERO_RESULTS instead of returning [].
+        if ((err as { code?: string })?.code !== "ZERO_RESULTS") throw err;
+      }
+
+      // partial_match means Google matched only part of the query, which is
+      // exactly the loose guess this search should not act on.
+      const seen = new Set<string>();
+      const exact: Choice[] = [];
+      for (const r of results ?? []) {
+        if (r.partial_match) continue;
+        const lat = r.geometry?.location?.lat();
+        const lng = r.geometry?.location?.lng();
+        if (!isValidLatLng(lat, lng) || seen.has(r.formatted_address)) continue;
+        seen.add(r.formatted_address);
+        exact.push({ label: r.formatted_address, lat, lng: lng as number });
+      }
+
+      if (exact.length === 0) {
+        setMessage(`No results for "${term}". Check the spelling or add a country.`);
+        return;
+      }
+      if (exact.length > 1) {
+        setChoices(exact.slice(0, 5));
+        return;
+      }
+      await flyToCoords(exact[0].lat, exact[0].lng);
     } catch (err) {
       console.error(err);
       setMessage("Search failed. Try again.");
     } finally {
       setSearching(false);
     }
-  }, [query]);
+  }, [flyToCoords]);
+
+  const handleSearch = useCallback(() => flyToPlace(query), [flyToPlace, query]);
+
+  // Fly to the trip's destination once, as soon as the globe is ready.
+  const flewToInitial = useRef(false);
+  useEffect(() => {
+    if (status !== "ready" || !initialDestination || flewToInitial.current) {
+      return;
+    }
+    flewToInitial.current = true;
+    flyToPlace(initialDestination);
+  }, [status, initialDestination, flyToPlace]);
 
   // ---- Drop into Street View at whatever the camera is looking at --------
   const enterStreetView = useCallback(async () => {
@@ -131,6 +226,10 @@ export default function ImmersiveGlobe() {
         (await g.maps.importLibrary("streetView")) as any;
 
       const center = map3d.center;
+      if (!isValidLatLng(center?.lat, center?.lng)) {
+        setMessage("Couldn't read the camera position. Try again.");
+        return;
+      }
       const location = { lat: center.lat, lng: center.lng };
 
       // Ask for the nearest outdoor panorama within 500m of the camera target.
@@ -199,14 +298,14 @@ export default function ImmersiveGlobe() {
 
       {/* Search bar */}
       <div className="absolute left-1/2 top-4 z-10 w-full max-w-md -translate-x-1/2 px-4">
-        <div className="flex gap-2 rounded-lg bg-white/95 p-2 shadow-lg backdrop-blur">
+        <div className="flex gap-2 rounded-lg bg-white/95 p-2 shadow-sm backdrop-blur">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch();
             }}
-            placeholder="Fly to a place — Kyoto, Machu Picchu, Reykjavík…"
+            placeholder="Search a place, e.g. Kyoto"
             className="border-0 shadow-none focus-visible:ring-0"
             disabled={status !== "ready"}
           />
@@ -224,9 +323,28 @@ export default function ImmersiveGlobe() {
         </div>
 
         {message && (
-          <p className="mt-2 rounded-md bg-white/95 px-3 py-2 text-sm text-black shadow">
+          <p className="mt-2 rounded-md bg-white/95 px-3 py-2 text-sm text-black shadow-sm">
             {message}
           </p>
+        )}
+
+        {choices && (
+          <div className="mt-2 rounded-md bg-white/95 p-2 text-sm text-black shadow-sm">
+            <p className="px-1 pb-1 font-medium">Which one did you mean?</p>
+            <ul>
+              {choices.map((c) => (
+                <li key={c.label}>
+                  <button
+                    type="button"
+                    onClick={() => flyToCoords(c.lat, c.lng)}
+                    className="w-full rounded px-1 py-1.5 text-left hover:bg-black/5"
+                  >
+                    {c.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 
@@ -259,7 +377,7 @@ export default function ImmersiveGlobe() {
           {status === "loading" ? (
             <>
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-sm opacity-80">Loading the planet…</p>
+              <p className="text-sm opacity-80">Loading globe…</p>
             </>
           ) : (
             <>

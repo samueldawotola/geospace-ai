@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { ResolvedPlace } from "@/lib/place-resolver";
 
 const OSM_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
@@ -46,47 +47,28 @@ type GooglePlace = {
   photos?: Array<{ name?: string }>;
 };
 
+// Only rows from a confidently resolved destination reach the cache (see
+// searchHotelsForDestination); a failed or partial lookup writes nothing.
 async function saveToCache(rows: PlaceCacheRow[]) {
+  rows = rows.filter((r) => r.name !== "Unnamed" && r.lat !== null && r.lng !== null);
   if (rows.length === 0) return;
   const { error, data } = await supabase
     .from("place_cache")
     .upsert(rows)
     .select();
   if (error) {
-    console.error("Supabase save error:", error);
+    console.error(
+      `Supabase save error: ${error.message}${error.code ? ` (${error.code})` : ""}${error.hint ? ` — ${error.hint}` : ""}`,
+    );
   } else {
     console.log("Places save successful, rows written:", data?.length);
   }
 }
 
-export async function geocodeDestination(
-  destination: string,
-): Promise<{
-  lat: number;
-  lng: number;
-  bbox: { south: number; west: number; north: number; east: number };
-} | null> {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(destination)}`,
-    { headers: { "User-Agent": "GeospaceAI/1.0 (https://geospace-ai.com)" } },
-  );
-  if (!res.ok) return null;
-
-  const data = await res.json();
-  const first = data?.[0];
-  if (!first?.boundingbox) return null;
-
-  const [south, north, west, east] = first.boundingbox.map(Number);
-  return {
-    lat: Number(first.lat),
-    lng: Number(first.lon),
-    bbox: { south, west, north, east },
-  };
-}
-
 export async function searchOsmHotels(
   bbox: { south: number; west: number; north: number; east: number },
   destination?: string,
+  { cache = false }: { cache?: boolean } = {},
 ) {
   const bboxStr = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
 
@@ -147,7 +129,7 @@ export async function searchOsmHotels(
   }));
 
   console.log("OSM rows built:", rows.length);
-  await saveToCache(rows);
+  if (cache && destination) await saveToCache(rows);
 
   return results;
 }
@@ -157,6 +139,7 @@ export async function searchGooglePlacesHotels(
   lng: number,
   destination?: string,
   type: string = "lodging",
+  { cache = false }: { cache?: boolean } = {},
 ) {
   const res = await fetch(
     "https://places.googleapis.com/v1/places:searchNearby",
@@ -178,6 +161,7 @@ export async function searchGooglePlacesHotels(
     },
   );
 
+  if (!res.ok) throw new Error(`Places nearby search failed: ${res.status}`);
   const data: { places?: GooglePlace[] } = await res.json();
   const places = data.places ?? [];
 
@@ -199,29 +183,25 @@ export async function searchGooglePlacesHotels(
   }));
 
   console.log("Places rows built:", rows.length);
-  await saveToCache(rows);
+  if (cache && destination) await saveToCache(rows);
 
   return places;
 }
 
-export async function searchHotelsForDestination(destination: string) {
-  const location = await geocodeDestination(destination);
-  if (!location) {
-    console.error(
-      "Could not geocode destination for hotel search:",
-      destination,
-    );
-    return;
-  }
+// Hotels are cached under the place's label, which is also the trip's
+// destination, so the trip page finds them (src/lib/hotels.ts).
+export async function searchHotelsForDestination(place: ResolvedPlace) {
+  const { lat, lng } = place.location;
+  const v = place.viewport;
+  // Cities have a real viewport; a landmark's is tiny, so search ~5 km around it.
+  const bbox =
+    v && Math.abs(v.high.latitude - v.low.latitude) >= 0.05
+      ? { south: v.low.latitude, west: v.low.longitude, north: v.high.latitude, east: v.high.longitude }
+      : { south: lat - 0.05, west: lng - 0.05, north: lat + 0.05, east: lng + 0.05 };
 
   const [osm, google] = await Promise.allSettled([
-    searchOsmHotels(location.bbox, destination),
-    searchGooglePlacesHotels(
-      location.lat,
-      location.lng,
-      destination,
-      "lodging",
-    ),
+    searchOsmHotels(bbox, place.label, { cache: true }),
+    searchGooglePlacesHotels(lat, lng, place.label, "lodging", { cache: true }),
   ]);
 
   if (osm.status === "rejected") {
