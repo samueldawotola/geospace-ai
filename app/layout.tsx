@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import Nav from "@/components/nav";
 import { auth0 } from "@/lib/auth0";
 import { SITE_URL } from "@/lib/site";
@@ -71,6 +72,7 @@ export default function RootLayout({
         </Suspense>
         <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
         <TimeOfDayCursor />
+        <Analytics />
       </body>
     </html>
   );
